@@ -1,0 +1,7 @@
+{
+  "/(protected)/licenses/page": "app/(protected)/licenses/page.js",
+  "/(protected)/alerts/page": "app/(protected)/alerts/page.js",
+  "/(protected)/partners/page": "app/(protected)/partners/page.js",
+  "/(protected)/organizations/page": "app/(protected)/organizations/page.js",
+  "/(auth)/login/page": "app/(auth)/login/page.js"
+}
