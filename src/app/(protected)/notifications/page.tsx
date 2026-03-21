@@ -166,16 +166,25 @@ export default function NotificationsPage() {
     return groups;
   }, [filtered]);
 
-  function markRead(id: string) {
-    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
+  async function markRead(id: string) {
+    try {
+      await alertService.acknowledge(id);
+      setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
+    } catch { /* keep local state unchanged on failure */ }
   }
 
-  function dismiss(id: string) {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  async function dismiss(id: string) {
+    try {
+      await alertService.resolve(id);
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    } catch { /* keep local state unchanged on failure */ }
   }
 
-  function markAllRead() {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  async function markAllRead() {
+    const unread = notifications.filter((n) => !n.read);
+    const results = await Promise.allSettled(unread.map((n) => alertService.acknowledge(n.id)));
+    const succeeded = new Set(unread.filter((_, i) => results[i].status === "fulfilled").map((n) => n.id));
+    setNotifications((prev) => prev.map((n) => succeeded.has(n.id) ? { ...n, read: true } : n));
   }
 
   const FILTERS: { key: FilterType; label: string; icon?: React.ReactNode }[] = [

@@ -283,6 +283,8 @@ export const sharedServicesCatalog = {
   update: (id: string, data: object) => api.put(`${V1}/shared-services/${id}`, data).then((r) => r.data),
 
   // Org subscriptions
+  getAllSubscriptions: () =>
+    api.get(`${V1}/shared-services/subscriptions`).then((r) => r.data),
   getSubscriptions: (orgId: string) =>
     api.get(`${V1}/shared-services/subscriptions/${orgId}`).then((r) => r.data),
   enableForOrg: (orgId: string, serviceId: string, callLimit?: number, enabledBy?: string) =>

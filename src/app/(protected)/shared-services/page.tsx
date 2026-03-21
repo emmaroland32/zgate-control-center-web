@@ -739,7 +739,7 @@ export default function SharedServicesPage() {
         setServices([]);
       }
       try {
-        const subs = await sharedServicesCatalog.getSubscriptions("ALL");
+        const subs = await sharedServicesCatalog.getAllSubscriptions();
         setSubscriptions(Array.isArray(subs) ? subs : []);
       } catch {
         setSubscriptions([]);
