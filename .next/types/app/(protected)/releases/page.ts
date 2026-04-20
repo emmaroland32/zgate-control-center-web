@@ -1,4 +1,4 @@
-// File: /Users/siyanda/Repository/ZGATE/zagte_v2/control-center/web/src/app/(protected)/releases/page.tsx
+// File: /Users/siyanda/Repository/eradiux/ZGATE/control-center/web/src/app/(protected)/releases/page.tsx
 import * as entry from '../../../../../src/app/(protected)/releases/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

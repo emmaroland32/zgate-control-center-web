@@ -1,4 +1,4 @@
-// File: /Users/siyanda/Repository/ZGATE/zagte_v2/control-center/web/src/app/(auth)/layout.tsx
+// File: /Users/siyanda/Repository/eradiux/ZGATE/control-center/web/src/app/(auth)/layout.tsx
 import * as entry from '../../../../src/app/(auth)/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
