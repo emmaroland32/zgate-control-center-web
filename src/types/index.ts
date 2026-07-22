@@ -1,5 +1,5 @@
 // ============================================================
-// ZGATE Nexus — Core Types
+// ZGATE Control Center — Core Types
 // ============================================================
 
 export type DeploymentStatus = "HEALTHY" | "DEGRADED" | "OFFLINE" | "PROVISIONING" | "MAINTENANCE";
@@ -152,7 +152,7 @@ export interface ServiceHealth {
 // -------------------------------------------------------
 // Dashboard KPIs
 // -------------------------------------------------------
-export interface NexusDashboardStats {
+export interface ControlCenterDashboardStats {
   totalDeployments: number;
   healthyDeployments: number;
   degradedDeployments: number;
@@ -170,9 +170,9 @@ export interface NexusDashboardStats {
 }
 
 // -------------------------------------------------------
-// Nexus User
+// Control Center User
 // -------------------------------------------------------
-export interface NexusUser {
+export interface ControlCenterUser {
   id: string;
   name: string;
   email: string;
@@ -185,7 +185,7 @@ export interface NexusUser {
 // -------------------------------------------------------
 // Integration / Webhook
 // -------------------------------------------------------
-export interface NexusIntegration {
+export interface ControlCenterIntegration {
   id: string;
   name: string;
   type: "SLACK" | "EMAIL" | "WEBHOOK" | "PAGERDUTY" | "TEAMS" | "JIRA" | "GITHUB";

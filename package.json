@@ -1,5 +1,5 @@
 {
-  "name": "zgate-nexus",
+  "name": "zgate-control-center",
   "version": "1.0.0",
   "private": true,
   "scripts": {

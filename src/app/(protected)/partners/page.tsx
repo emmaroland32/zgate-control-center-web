@@ -25,7 +25,7 @@ import {
   List,
   Briefcase,
 } from "lucide-react";
-import { partnerService, organizationService, licenseService } from "@/services/nexus.service";
+import { partnerService, organizationService, licenseService } from "@/services/controlcenter.service";
 import type { Partner, PartnerTier, Organization, License } from "@/types";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -156,7 +156,7 @@ function PartnerCard({
             <Mail size={13} className="text-slate-400 shrink-0" />
             <a
               href={`mailto:${partner.contactEmail}`}
-              className="hover:text-nexus-600 transition-colors truncate"
+              className="hover:text-controlcenter-600 transition-colors truncate"
               onClick={(e) => e.stopPropagation()}
             >
               {partner.contactEmail}
@@ -354,7 +354,7 @@ function AddPartnerDialog({
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <div className="flex items-center gap-2">
-            <Handshake size={18} className="text-nexus-600" />
+            <Handshake size={18} className="text-controlcenter-600" />
             <h2 className="font-bold text-slate-900">Add Partner</h2>
           </div>
           <button
@@ -572,7 +572,7 @@ function EditPartnerDialog({
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <div className="flex items-center gap-2">
-            <Edit size={18} className="text-nexus-600" />
+            <Edit size={18} className="text-controlcenter-600" />
             <h2 className="font-bold text-slate-900">Edit Partner</h2>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
@@ -717,7 +717,7 @@ function PartnerDetailPanel({
                 className={cn(
                   "px-4 py-2.5 text-sm font-medium border-b-2 transition-colors",
                   tab === t.key
-                    ? "border-nexus-600 text-nexus-600"
+                    ? "border-controlcenter-600 text-controlcenter-600"
                     : "border-transparent text-slate-500 hover:text-slate-700"
                 )}
               >
@@ -754,7 +754,7 @@ function OverviewTab({ partner }: { partner: Partner }) {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         <div className="stat-card text-center items-center">
-          <Building2 size={18} className="text-nexus-500 mb-1" />
+          <Building2 size={18} className="text-controlcenter-500 mb-1" />
           <span className="stat-value">{partner.deploymentCount}</span>
           <span className="stat-label">Total Deployments</span>
         </div>
@@ -798,7 +798,7 @@ function OverviewTab({ partner }: { partner: Partner }) {
                 href={partner.website}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-nexus-600 hover:underline"
+                className="flex items-center gap-1 text-controlcenter-600 hover:underline"
               >
                 {partner.website.replace(/^https?:\/\//, "")}
                 <ExternalLink size={11} />
@@ -848,8 +848,8 @@ function DeploymentsTab({ partner }: { partner: Partner }) {
         deployments.map((d) => (
           <div key={d.id} className="card p-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-nexus-50 rounded-lg flex items-center justify-center">
-                <Building2 size={16} className="text-nexus-500" />
+              <div className="w-9 h-9 bg-controlcenter-50 rounded-lg flex items-center justify-center">
+                <Building2 size={16} className="text-controlcenter-500" />
               </div>
               <div>
                 <p className="font-medium text-sm text-slate-900">{d.name}</p>
@@ -952,14 +952,14 @@ function ContactsTab({ partner }: { partner: Partner }) {
           <span className="badge badge-blue">Primary</span>
         </div>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-nexus-100 rounded-full flex items-center justify-center text-nexus-700 font-bold text-sm">
+          <div className="w-10 h-10 bg-controlcenter-100 rounded-full flex items-center justify-center text-controlcenter-700 font-bold text-sm">
             {partner.contactName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
           </div>
           <div>
             <p className="font-semibold text-slate-900">{partner.contactName}</p>
             <div className="flex items-center gap-1 mt-0.5">
               <Mail size={11} className="text-slate-400" />
-              <a href={`mailto:${partner.contactEmail}`} className="text-xs text-nexus-600 hover:underline">
+              <a href={`mailto:${partner.contactEmail}`} className="text-xs text-controlcenter-600 hover:underline">
                 {partner.contactEmail}
               </a>
             </div>
@@ -1123,7 +1123,7 @@ export default function PartnersPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title flex items-center gap-2">
-            <Handshake size={22} className="text-nexus-600" />
+            <Handshake size={22} className="text-controlcenter-600" />
             Partners
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
@@ -1162,7 +1162,7 @@ export default function PartnersPage() {
           )}
         </div>
         <div className="stat-card">
-          <div className="flex items-center gap-2 text-nexus-500 mb-1">
+          <div className="flex items-center gap-2 text-controlcenter-500 mb-1">
             <Building2 size={16} />
             <span className="stat-label">Active Deployments</span>
           </div>

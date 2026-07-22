@@ -15,7 +15,7 @@ import {
   Globe,
   RefreshCw,
 } from "lucide-react";
-import { organizationService, licenseService, deploymentService } from "@/services/nexus.service";
+import { organizationService, licenseService, deploymentService } from "@/services/controlcenter.service";
 import type { Organization, License, Deployment } from "@/types";
 import { formatDateTime, timeAgo } from "@/lib/utils";
 
@@ -81,8 +81,8 @@ export default function OrganizationDetailPage() {
 
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div className="flex items-start gap-4">
-          <div className="w-12 h-12 bg-nexus-100 rounded-lg flex items-center justify-center">
-            <Building2 size={22} className="text-nexus-600" />
+          <div className="w-12 h-12 bg-controlcenter-100 rounded-lg flex items-center justify-center">
+            <Building2 size={22} className="text-controlcenter-600" />
           </div>
           <div>
             <h1 className="page-title">{org.name}</h1>

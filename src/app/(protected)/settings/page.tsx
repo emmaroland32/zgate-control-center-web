@@ -5,7 +5,7 @@ import {
   Settings, Shield, Bell, Key, Package, Save, Check,
   Eye, EyeOff, RefreshCw, AlertTriangle, Globe, Lock,
 } from "lucide-react";
-import { configService } from "@/services/nexus.service";
+import { configService } from "@/services/controlcenter.service";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -296,7 +296,7 @@ export default function SettingsPage() {
               onClick={() => setTab(key)}
               className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
                 tab === key
-                  ? "border-nexus-600 text-nexus-700"
+                  ? "border-controlcenter-600 text-controlcenter-700"
                   : "border-transparent text-slate-500 hover:text-slate-700"
               }`}
             >
@@ -322,7 +322,7 @@ export default function SettingsPage() {
               <div className="space-y-5">
                 <div>
                   <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <Globe size={15} className="text-nexus-500" />
+                    <Globe size={15} className="text-controlcenter-500" />
                     General Settings
                   </h2>
                   <div className="space-y-4">
@@ -364,7 +364,7 @@ export default function SettingsPage() {
             {tab === "security" && (
               <div className="space-y-5">
                 <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <Shield size={15} className="text-nexus-500" />
+                  <Shield size={15} className="text-controlcenter-500" />
                   Security Settings
                 </h2>
 
@@ -442,7 +442,7 @@ export default function SettingsPage() {
             {tab === "notifications" && (
               <div className="space-y-5">
                 <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <Bell size={15} className="text-nexus-500" />
+                  <Bell size={15} className="text-controlcenter-500" />
                   Notification Settings
                 </h2>
 
@@ -512,7 +512,7 @@ export default function SettingsPage() {
             {tab === "licensing" && (
               <div className="space-y-5">
                 <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <Key size={15} className="text-nexus-500" />
+                  <Key size={15} className="text-controlcenter-500" />
                   Licensing Settings
                 </h2>
 
@@ -574,7 +574,7 @@ export default function SettingsPage() {
             {tab === "registry" && (
               <div className="space-y-5">
                 <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <Package size={15} className="text-nexus-500" />
+                  <Package size={15} className="text-controlcenter-500" />
                   Docker Registry Settings
                 </h2>
 

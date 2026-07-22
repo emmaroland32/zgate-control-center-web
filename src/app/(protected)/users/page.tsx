@@ -6,14 +6,14 @@ import {
   Users, Plus, Edit, Lock, UserX, Shield, Eye, Mail, Clock,
   RefreshCw, AlertTriangle, CheckCircle2, X,
 } from "lucide-react";
-import { userService } from "@/services/nexus.service";
+import { userService } from "@/services/controlcenter.service";
 import { timeAgo, formatDate } from "@/lib/utils";
-import type { NexusUser } from "@/types";
+import type { ControlCenterUser } from "@/types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function roleBadge(role: NexusUser["role"]) {
-  const map: Record<NexusUser["role"], string> = {
+function roleBadge(role: ControlCenterUser["role"]) {
+  const map: Record<ControlCenterUser["role"], string> = {
     SUPER_ADMIN: "badge badge-purple",
     ADMIN: "badge badge-blue",
     SUPPORT: "badge badge-green",
@@ -22,8 +22,8 @@ function roleBadge(role: NexusUser["role"]) {
   return map[role];
 }
 
-function roleLabel(role: NexusUser["role"]) {
-  const map: Record<NexusUser["role"], string> = {
+function roleLabel(role: ControlCenterUser["role"]) {
+  const map: Record<ControlCenterUser["role"], string> = {
     SUPER_ADMIN: "Super Admin",
     ADMIN: "Admin",
     SUPPORT: "Support",
@@ -38,7 +38,7 @@ function avatarInitials(name: string) {
 
 function avatarColor(id: string) {
   const colors = [
-    "bg-nexus-500", "bg-blue-500", "bg-emerald-500",
+    "bg-controlcenter-500", "bg-blue-500", "bg-emerald-500",
     "bg-amber-500", "bg-purple-500", "bg-pink-500",
   ];
   const idx = id.charCodeAt(id.length - 1) % colors.length;
@@ -69,7 +69,7 @@ const PERMISSIONS = [
   { label: "View health & metrics", SUPER_ADMIN: true, ADMIN: true, SUPPORT: true, VIEWER: true },
 ];
 
-const ROLES: NexusUser["role"][] = ["SUPER_ADMIN", "ADMIN", "SUPPORT", "VIEWER"];
+const ROLES: ControlCenterUser["role"][] = ["SUPER_ADMIN", "ADMIN", "SUPPORT", "VIEWER"];
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -90,12 +90,12 @@ function SkeletonRow() {
 interface AddUserDialogProps {
   open: boolean;
   onClose: () => void;
-  onCreated: (user: NexusUser) => void;
+  onCreated: (user: ControlCenterUser) => void;
 }
 
 function AddUserDialog({ open, onClose, onCreated }: AddUserDialogProps) {
   const [form, setForm] = useState({
-    name: "", email: "", password: "", role: "VIEWER" as NexusUser["role"],
+    name: "", email: "", password: "", role: "VIEWER" as ControlCenterUser["role"],
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,7 +139,7 @@ function AddUserDialog({ open, onClose, onCreated }: AddUserDialogProps) {
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 mx-4">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <Users size={16} className="text-nexus-500" />
+            <Users size={16} className="text-controlcenter-500" />
             Add User
           </h2>
           <button onClick={handleClose} className="text-slate-400 hover:text-slate-600 transition-colors">
@@ -195,7 +195,7 @@ function AddUserDialog({ open, onClose, onCreated }: AddUserDialogProps) {
             <select
               className="select"
               value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value as NexusUser["role"] })}
+              onChange={(e) => setForm({ ...form, role: e.target.value as ControlCenterUser["role"] })}
             >
               <option value="VIEWER">Viewer</option>
               <option value="SUPPORT">Support</option>
@@ -222,13 +222,13 @@ function AddUserDialog({ open, onClose, onCreated }: AddUserDialogProps) {
 // ─── Edit User Dialog ─────────────────────────────────────────────────────────
 
 interface EditUserDialogProps {
-  user: NexusUser | null;
+  user: ControlCenterUser | null;
   onClose: () => void;
-  onSaved: (user: NexusUser) => void;
+  onSaved: (user: ControlCenterUser) => void;
 }
 
 function EditUserDialog({ user, onClose, onSaved }: EditUserDialogProps) {
-  const [form, setForm] = useState({ name: user?.name ?? "", role: user?.role ?? "VIEWER" as NexusUser["role"] });
+  const [form, setForm] = useState({ name: user?.name ?? "", role: user?.role ?? "VIEWER" as ControlCenterUser["role"] });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -256,7 +256,7 @@ function EditUserDialog({ user, onClose, onSaved }: EditUserDialogProps) {
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 mx-4">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <Edit size={16} className="text-nexus-500" />
+            <Edit size={16} className="text-controlcenter-500" />
             Edit User
           </h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
@@ -282,7 +282,7 @@ function EditUserDialog({ user, onClose, onSaved }: EditUserDialogProps) {
             <select
               className="select"
               value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value as NexusUser["role"] })}
+              onChange={(e) => setForm({ ...form, role: e.target.value as ControlCenterUser["role"] })}
             >
               <option value="VIEWER">Viewer</option>
               <option value="SUPPORT">Support</option>
@@ -306,12 +306,12 @@ function EditUserDialog({ user, onClose, onSaved }: EditUserDialogProps) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<NexusUser[]>([]);
+  const [users, setUsers] = useState<ControlCenterUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
-  const [editUser, setEditUser] = useState<NexusUser | null>(null);
-  const [actionUser, setActionUser] = useState<NexusUser | null>(null);
+  const [editUser, setEditUser] = useState<ControlCenterUser | null>(null);
+  const [actionUser, setActionUser] = useState<ControlCenterUser | null>(null);
   const [actionType, setActionType] = useState<"disable" | "revoke" | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -331,7 +331,7 @@ export default function UsersPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  async function handleDisable(u: NexusUser) {
+  async function handleDisable(u: ControlCenterUser) {
     setActionLoading(true);
     try {
       await userService.disable(u.email);
@@ -342,7 +342,7 @@ export default function UsersPage() {
     setActionLoading(false);
   }
 
-  async function handleRevoke(u: NexusUser) {
+  async function handleRevoke(u: ControlCenterUser) {
     setActionLoading(true);
     try {
       await userService.revokeSessions(u.email);
@@ -390,10 +390,10 @@ export default function UsersPage() {
           <div className="stat-card">
             <div className="flex items-center justify-between mb-1">
               <span className="stat-label">Total Users</span>
-              <Users size={15} className="text-nexus-400" />
+              <Users size={15} className="text-controlcenter-400" />
             </div>
             <div className="stat-value">{loading ? "—" : totalUsers}</div>
-            <div className="text-xs text-slate-400 mt-1">Nexus admin accounts</div>
+            <div className="text-xs text-slate-400 mt-1">Control Center admin accounts</div>
           </div>
           <div className="stat-card">
             <div className="flex items-center justify-between mb-1">
@@ -425,7 +425,7 @@ export default function UsersPage() {
         <div className="table-container">
           <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-slate-100">
             <h2 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-              <Users size={14} className="text-nexus-500" />
+              <Users size={14} className="text-controlcenter-500" />
               All Users
             </h2>
             <span className="text-xs text-slate-400">{loading ? "…" : `${totalUsers} users`}</span>
@@ -489,7 +489,7 @@ export default function UsersPage() {
                         <button
                           title="Edit"
                           onClick={() => setEditUser(u)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-nexus-600 hover:bg-nexus-50 transition-colors"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-controlcenter-600 hover:bg-controlcenter-50 transition-colors"
                         >
                           <Edit size={13} />
                         </button>
@@ -520,7 +520,7 @@ export default function UsersPage() {
         {/* Role Permissions Matrix */}
         <div className="card overflow-hidden">
           <div className="flex items-center gap-2 px-5 pt-4 pb-3 border-b border-slate-100">
-            <Shield size={14} className="text-nexus-500" />
+            <Shield size={14} className="text-controlcenter-500" />
             <h2 className="text-sm font-semibold text-slate-800">Role Permissions Matrix</h2>
           </div>
           <div className="overflow-x-auto">

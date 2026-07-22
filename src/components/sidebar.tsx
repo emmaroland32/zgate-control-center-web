@@ -29,7 +29,7 @@ function useCurrentUser() {
   const [user, setUser] = useState(DEFAULT_USER);
 
   useEffect(() => {
-    const token = localStorage.getItem("nexus_token");
+    const token = localStorage.getItem("controlcenter_token");
     if (!token) return;
     const claims = decodeToken(token);
     const name = claims?.name || claims?.email?.split("@")[0] || "Admin";
@@ -111,15 +111,15 @@ export default function Sidebar() {
     href === "/" ? path === "/" : path.startsWith(href);
 
   return (
-    <aside className="fixed inset-y-0 left-0 w-[260px] bg-nexus-950 text-white flex flex-col z-30">
+    <aside className="fixed inset-y-0 left-0 w-[260px] bg-controlcenter-950 text-white flex flex-col z-30">
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 py-4 border-b border-white/10">
-        <div className="w-9 h-9 bg-nexus-500 rounded-xl flex items-center justify-center shadow-lg">
+        <div className="w-9 h-9 bg-controlcenter-500 rounded-xl flex items-center justify-center shadow-lg">
           <Zap size={18} className="text-white" />
         </div>
         <div>
           <div className="text-sm font-bold tracking-wide">ZGATE Control Center</div>
-          <div className="text-[10px] text-nexus-300 uppercase tracking-widest">Management Portal</div>
+          <div className="text-[10px] text-controlcenter-300 uppercase tracking-widest">Management Portal</div>
         </div>
       </div>
 
@@ -127,7 +127,7 @@ export default function Sidebar() {
       <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-4">
         {sections.map((section) => (
           <div key={section.label}>
-            <div className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-nexus-500">
+            <div className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-controlcenter-500">
               {section.label}
             </div>
             <div className="space-y-0.5">
@@ -140,21 +140,21 @@ export default function Sidebar() {
                     className={cn(
                       "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all group",
                       active
-                        ? "bg-nexus-600 text-white shadow-sm"
-                        : "text-nexus-200 hover:bg-white/5 hover:text-white"
+                        ? "bg-controlcenter-600 text-white shadow-sm"
+                        : "text-controlcenter-200 hover:bg-white/5 hover:text-white"
                     )}
                   >
                     <Icon
                       size={15}
                       className={cn(
                         "shrink-0",
-                        active ? "text-white" : "text-nexus-400 group-hover:text-white"
+                        active ? "text-white" : "text-controlcenter-400 group-hover:text-white"
                       )}
                     />
                     <span className="flex-1">{label}</span>
                     {active && <ChevronRight size={11} className="opacity-50" />}
                     {href === "/setup" && !active && (
-                      <span className="text-[9px] bg-nexus-600 text-white px-1.5 py-0.5 rounded-full font-semibold">
+                      <span className="text-[9px] bg-controlcenter-600 text-white px-1.5 py-0.5 rounded-full font-semibold">
                         NEW
                       </span>
                     )}
@@ -168,31 +168,31 @@ export default function Sidebar() {
 
       {/* Git / version tag */}
       <div className="px-4 py-2 border-t border-white/5">
-        <div className="flex items-center gap-2 text-[10px] text-nexus-600">
+        <div className="flex items-center gap-2 text-[10px] text-controlcenter-600">
           <GitBranch size={10} />
-          <span>v1.0.0 · nexus/main</span>
+          <span>v1.0.0 · controlcenter/main</span>
         </div>
       </div>
 
       {/* Bottom user */}
       <div className="p-3 border-t border-white/10 space-y-1">
         <div className="flex items-center gap-3 px-3 py-2 rounded-lg">
-          <div className="w-8 h-8 bg-nexus-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0">
+          <div className="w-8 h-8 bg-controlcenter-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0">
             {user.initials}
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-xs font-medium text-white truncate">{user.name}</div>
-            <div className="text-[10px] text-nexus-400 truncate">{user.email}</div>
+            <div className="text-[10px] text-controlcenter-400 truncate">{user.email}</div>
           </div>
         </div>
         <button
           onClick={() => {
-            localStorage.removeItem("nexus_token");
+            localStorage.removeItem("controlcenter_token");
             // Clear the middleware cookie too
-            document.cookie = "nexus_token=; path=/; max-age=0";
+            document.cookie = "controlcenter_token=; path=/; max-age=0";
             window.location.href = "/login";
           }}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-nexus-300
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-controlcenter-300
                      hover:bg-white/5 hover:text-white transition-colors"
         >
           <LogOut size={13} />

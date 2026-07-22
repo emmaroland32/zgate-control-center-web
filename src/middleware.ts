@@ -11,7 +11,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = request.cookies.get("nexus_token")?.value;
+  const token = request.cookies.get("controlcenter_token")?.value;
 
   if (!token) {
     const loginUrl = new URL("/login", request.url);

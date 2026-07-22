@@ -8,9 +8,9 @@ import {
   CheckCircle2, XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { integrationService } from "@/services/nexus.service";
+import { integrationService } from "@/services/controlcenter.service";
 import { timeAgo, formatDate } from "@/lib/utils";
-import type { NexusIntegration } from "@/types";
+import type { ControlCenterIntegration } from "@/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -67,15 +67,15 @@ const ALL_SCOPES = [
 
 // ─── Integration icon & color map ─────────────────────────────────────────────
 
-function IntegrationIcon({ type, size = 20 }: { type: NexusIntegration["type"]; size?: number }) {
-  const map: Record<NexusIntegration["type"], { bg: string; label: string }> = {
+function IntegrationIcon({ type, size = 20 }: { type: ControlCenterIntegration["type"]; size?: number }) {
+  const map: Record<ControlCenterIntegration["type"], { bg: string; label: string }> = {
     SLACK: { bg: "bg-[#4A154B]", label: "S" },
     EMAIL: { bg: "bg-blue-600", label: "✉" },
     TEAMS: { bg: "bg-[#6264A7]", label: "T" },
     PAGERDUTY: { bg: "bg-[#06AC38]", label: "PD" },
     JIRA: { bg: "bg-[#0052CC]", label: "J" },
     GITHUB: { bg: "bg-slate-800", label: "GH" },
-    WEBHOOK: { bg: "bg-nexus-600", label: "W" },
+    WEBHOOK: { bg: "bg-controlcenter-600", label: "W" },
   };
   const { bg, label } = map[type] ?? { bg: "bg-slate-400", label: "?" };
   return (
@@ -120,7 +120,7 @@ function SkeletonRow({ cols }: { cols: number }) {
 // ─── Configure Integration Dialog ────────────────────────────────────────────
 
 function ConfigureDialog({ integration, onClose, onSaved }: {
-  integration: NexusIntegration | null;
+  integration: ControlCenterIntegration | null;
   onClose: () => void;
   onSaved: (id: string, config: Record<string, string>) => void;
 }) {
@@ -134,7 +134,7 @@ function ConfigureDialog({ integration, onClose, onSaved }: {
 
   if (!integration) return null;
 
-  const fields: Record<NexusIntegration["type"], { key: string; label: string; placeholder?: string; type?: string }[]> = {
+  const fields: Record<ControlCenterIntegration["type"], { key: string; label: string; placeholder?: string; type?: string }[]> = {
     SLACK: [
       { key: "webhookUrl", label: "Webhook URL", placeholder: "https://hooks.slack.com/services/…" },
       { key: "channel", label: "Channel", placeholder: "#zgate-alerts" },
@@ -270,7 +270,7 @@ function AddWebhookDialog({ open, onClose, onCreated }: {
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <Bell size={16} className="text-nexus-500" />
+            <Bell size={16} className="text-controlcenter-500" />
             Add Webhook
           </h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
@@ -302,7 +302,7 @@ function AddWebhookDialog({ open, onClose, onCreated }: {
                 <label key={ev} className="flex items-center gap-2.5 cursor-pointer group">
                   <input
                     type="checkbox"
-                    className="w-3.5 h-3.5 accent-nexus-600"
+                    className="w-3.5 h-3.5 accent-controlcenter-600"
                     checked={form.events.includes(ev)}
                     onChange={() => toggleEvent(ev)}
                   />
@@ -394,7 +394,7 @@ function GenerateKeyDialog({ open, onClose, onCreated }: {
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <Key size={16} className="text-nexus-500" />
+            <Key size={16} className="text-controlcenter-500" />
             {createdKey ? "API Key Created" : "Generate API Key"}
           </h2>
           <button onClick={handleClose} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
@@ -441,7 +441,7 @@ function GenerateKeyDialog({ open, onClose, onCreated }: {
                 <div className="border border-slate-200 rounded-lg p-3 max-h-48 overflow-y-auto grid grid-cols-2 gap-1.5">
                   {ALL_SCOPES.map((s) => (
                     <label key={s} className="flex items-center gap-2 cursor-pointer group">
-                      <input type="checkbox" className="w-3.5 h-3.5 accent-nexus-600" checked={form.scopes.includes(s)} onChange={() => toggleScope(s)} />
+                      <input type="checkbox" className="w-3.5 h-3.5 accent-controlcenter-600" checked={form.scopes.includes(s)} onChange={() => toggleScope(s)} />
                       <span className="text-xs font-mono text-slate-600 group-hover:text-slate-900">{s}</span>
                     </label>
                   ))}
@@ -470,13 +470,13 @@ type Tab = "integrations" | "webhooks" | "apikeys";
 
 export default function IntegrationsPage() {
   const [tab, setTab] = useState<Tab>("integrations");
-  const [integrations, setIntegrations] = useState<NexusIntegration[]>([]);
+  const [integrations, setIntegrations] = useState<ControlCenterIntegration[]>([]);
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [configTarget, setConfigTarget] = useState<NexusIntegration | null>(null);
+  const [configTarget, setConfigTarget] = useState<ControlCenterIntegration | null>(null);
   const [showAddWebhook, setShowAddWebhook] = useState(false);
   const [showGenKey, setShowGenKey] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -584,7 +584,7 @@ export default function IntegrationsPage() {
               onClick={() => setTab(key)}
               className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
                 tab === key
-                  ? "border-nexus-600 text-nexus-700"
+                  ? "border-controlcenter-600 text-controlcenter-700"
                   : "border-transparent text-slate-500 hover:text-slate-700"
               }`}
             >
@@ -617,7 +617,7 @@ export default function IntegrationsPage() {
                     {/* Toggle */}
                     <button
                       onClick={() => toggleIntegration(int.id)}
-                      className={`relative w-10 h-5.5 rounded-full transition-colors shrink-0 ${int.enabled ? "bg-nexus-500" : "bg-slate-200"}`}
+                      className={`relative w-10 h-5.5 rounded-full transition-colors shrink-0 ${int.enabled ? "bg-controlcenter-500" : "bg-slate-200"}`}
                       style={{ height: "1.375rem" }}
                       title={int.enabled ? "Disable" : "Enable"}
                     >
@@ -679,7 +679,7 @@ export default function IntegrationsPage() {
                             <span className="text-xs font-mono text-slate-500 truncate max-w-[160px]">
                               {wh.url.replace("https://", "")}
                             </span>
-                            <a href={wh.url} target="_blank" rel="noopener noreferrer" className="text-slate-300 hover:text-nexus-500">
+                            <a href={wh.url} target="_blank" rel="noopener noreferrer" className="text-slate-300 hover:text-controlcenter-500">
                               <ExternalLink size={11} />
                             </a>
                           </div>
@@ -716,7 +716,7 @@ export default function IntegrationsPage() {
                         </td>
                         <td>
                           <div className="flex items-center gap-1">
-                            <button title="Test webhook" className="p-1.5 rounded-lg text-slate-400 hover:text-nexus-600 hover:bg-nexus-50 transition-colors">
+                            <button title="Test webhook" className="p-1.5 rounded-lg text-slate-400 hover:text-controlcenter-600 hover:bg-controlcenter-50 transition-colors">
                               <RefreshCw size={13} />
                             </button>
                             <button
@@ -833,7 +833,7 @@ export default function IntegrationsPage() {
                             <button
                               title={copiedKey === key.keyMasked ? "Copied!" : "Copy key reference"}
                               onClick={() => copyKey(key.keyMasked)}
-                              className={`p-1.5 rounded-lg transition-colors ${copiedKey === key.keyMasked ? "text-emerald-600 bg-emerald-50" : "text-slate-400 hover:text-nexus-600 hover:bg-nexus-50"}`}
+                              className={`p-1.5 rounded-lg transition-colors ${copiedKey === key.keyMasked ? "text-emerald-600 bg-emerald-50" : "text-slate-400 hover:text-controlcenter-600 hover:bg-controlcenter-50"}`}
                             >
                               {copiedKey === key.keyMasked ? <Check size={13} /> : <Copy size={13} />}
                             </button>

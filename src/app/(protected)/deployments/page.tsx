@@ -6,7 +6,7 @@ import {
   Rocket, Globe, ArrowRight, CheckCircle2, XCircle, Clock,
   RefreshCw, Terminal, AlertTriangle, ChevronRight, Play, X,
 } from "lucide-react";
-import { releaseService, deploymentService, organizationService } from "@/services/nexus.service";
+import { releaseService, deploymentService, organizationService } from "@/services/controlcenter.service";
 import type { Deployment, SoftwareRelease, Organization } from "@/types";
 import { formatDateTime, timeAgo, cn } from "@/lib/utils";
 
@@ -87,7 +87,7 @@ function PushDialog({ releases, orgs, onClose, onPushed }: PushDialogProps) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <div className="flex items-center gap-2">
-            <Rocket size={18} className="text-nexus-600" />
+            <Rocket size={18} className="text-controlcenter-600" />
             <span className="font-semibold text-slate-900">Push Update</span>
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
@@ -103,7 +103,7 @@ function PushDialog({ releases, orgs, onClose, onPushed }: PushDialogProps) {
               <button
                 type="button"
                 onClick={toggleAll}
-                className="text-xs text-nexus-600 hover:underline"
+                className="text-xs text-controlcenter-600 hover:underline"
               >
                 {selectedOrgs.length === orgs.length ? "Deselect all" : "Select all"}
               </button>
@@ -118,20 +118,20 @@ function PushDialog({ releases, orgs, onClose, onPushed }: PushDialogProps) {
                     key={org.id}
                     className={cn(
                       "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors",
-                      checked ? "bg-nexus-50" : "hover:bg-slate-50"
+                      checked ? "bg-controlcenter-50" : "hover:bg-slate-50"
                     )}
                   >
                     <input
                       type="checkbox"
                       checked={checked}
                       onChange={() => toggleOrg(org.id)}
-                      className="w-4 h-4 accent-nexus-600"
+                      className="w-4 h-4 accent-controlcenter-600"
                     />
                     <div className="flex-1">
                       <div className="text-sm font-medium text-slate-800">{org.name}</div>
                       <div className="text-xs text-slate-500">Current: v{org.deployedVersion ?? "—"}</div>
                     </div>
-                    {checked && <ChevronRight size={14} className="text-nexus-500" />}
+                    {checked && <ChevronRight size={14} className="text-controlcenter-500" />}
                   </label>
                 );
               })
@@ -176,7 +176,7 @@ function PushDialog({ releases, orgs, onClose, onPushed }: PushDialogProps) {
                   className={cn(
                     "flex items-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer flex-1 transition-colors",
                     scheduleMode === mode
-                      ? "border-nexus-400 bg-nexus-50 text-nexus-800"
+                      ? "border-controlcenter-400 bg-controlcenter-50 text-controlcenter-800"
                       : "border-slate-200 text-slate-600 hover:bg-slate-50"
                   )}
                 >
@@ -184,7 +184,7 @@ function PushDialog({ releases, orgs, onClose, onPushed }: PushDialogProps) {
                     type="radio"
                     checked={scheduleMode === mode}
                     onChange={() => setScheduleMode(mode)}
-                    className="accent-nexus-600"
+                    className="accent-controlcenter-600"
                   />
                   <span className="text-sm font-medium capitalize">{mode}</span>
                 </label>
@@ -213,7 +213,7 @@ function PushDialog({ releases, orgs, onClose, onPushed }: PushDialogProps) {
               onClick={() => setNotify((p) => !p)}
               className={cn(
                 "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-                notify ? "bg-nexus-600" : "bg-slate-200"
+                notify ? "bg-controlcenter-600" : "bg-slate-200"
               )}
             >
               <span className={cn(
@@ -257,7 +257,7 @@ function LogsDrawer({ deployment, onClose }: { deployment: Deployment; onClose: 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
           <div className="flex items-center gap-2">
-            <Terminal size={16} className="text-nexus-600" />
+            <Terminal size={16} className="text-controlcenter-600" />
             <div>
               <span className="font-semibold text-slate-900">Deployment Logs</span>
               <div className="text-xs text-slate-500 mt-0.5">{deployment.organizationName}</div>
@@ -317,11 +317,11 @@ function InProgressCard({ deployment }: { deployment: Deployment }) {
   const progress = Math.min(95, Math.floor((Date.now() - new Date(deployment.startedAt).getTime()) / 600000 * 100));
 
   return (
-    <div className="card p-4 border-l-4 border-nexus-500 bg-nexus-50/30">
+    <div className="card p-4 border-l-4 border-controlcenter-500 bg-controlcenter-50/30">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
           <div className="flex items-center gap-2 mb-0.5">
-            <Globe size={14} className="text-nexus-600" />
+            <Globe size={14} className="text-controlcenter-600" />
             <span className="font-semibold text-slate-900 text-sm">{deployment.organizationName}</span>
             <span className="badge badge-blue flex items-center gap-1">
               <RefreshCw size={10} className="animate-spin" />
@@ -331,7 +331,7 @@ function InProgressCard({ deployment }: { deployment: Deployment }) {
           <div className="flex items-center gap-2 text-xs text-slate-500">
             <span className="font-mono">v{deployment.previousVersion}</span>
             <ArrowRight size={10} />
-            <span className="font-mono text-nexus-700 font-semibold">v{deployment.releaseVersion}</span>
+            <span className="font-mono text-controlcenter-700 font-semibold">v{deployment.releaseVersion}</span>
           </div>
         </div>
         <div className="text-right flex-shrink-0">
@@ -348,7 +348,7 @@ function InProgressCard({ deployment }: { deployment: Deployment }) {
         </div>
         <div className="w-full bg-slate-200 rounded-full h-1.5">
           <div
-            className="bg-nexus-500 h-1.5 rounded-full transition-all duration-1000"
+            className="bg-controlcenter-500 h-1.5 rounded-full transition-all duration-1000"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -441,8 +441,8 @@ export default function DeploymentsPage() {
     {
       label: "Total Deployments",
       value: total,
-      icon: <Globe size={18} className="text-nexus-600" />,
-      bg: "bg-nexus-50",
+      icon: <Globe size={18} className="text-controlcenter-600" />,
+      bg: "bg-controlcenter-50",
     },
     {
       label: "In Progress",
@@ -560,8 +560,8 @@ export default function DeploymentsPage() {
                         <tr key={d.id}>
                           <td>
                             <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 bg-nexus-100 rounded-md flex items-center justify-center flex-shrink-0">
-                                <Globe size={13} className="text-nexus-600" />
+                              <div className="w-7 h-7 bg-controlcenter-100 rounded-md flex items-center justify-center flex-shrink-0">
+                                <Globe size={13} className="text-controlcenter-600" />
                               </div>
                               <span className="font-medium text-slate-900">{d.organizationName}</span>
                             </div>

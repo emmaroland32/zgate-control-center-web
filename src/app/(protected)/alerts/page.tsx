@@ -23,7 +23,7 @@ import {
   Mail,
   Zap,
 } from "lucide-react";
-import { alertService } from "@/services/nexus.service";
+import { alertService } from "@/services/controlcenter.service";
 import { timeAgo, formatDateTime, getCurrentUserEmail } from "@/lib/utils";
 import type { AlertRule, ActiveAlert, AlertSeverity, AlertStatus, AlertCondition } from "@/types";
 
@@ -403,14 +403,14 @@ export default function AlertsPage() {
               onClick={() => setTab(key)}
               className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors -mb-px ${
                 tab === key
-                  ? "border-nexus-600 text-nexus-700"
+                  ? "border-controlcenter-600 text-controlcenter-700"
                   : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
               }`}
             >
               {label}
               {count !== undefined && count > 0 && (
                 <span className={`inline-flex items-center justify-center min-w-[1.2rem] h-5 rounded-full text-[10px] font-bold px-1 ${
-                  tab === key ? "bg-nexus-100 text-nexus-700" : "bg-slate-100 text-slate-500"
+                  tab === key ? "bg-controlcenter-100 text-controlcenter-700" : "bg-slate-100 text-slate-500"
                 }`}>
                   {count}
                 </span>
@@ -538,7 +538,7 @@ export default function AlertsPage() {
                 <button
                   key={tpl.label}
                   onClick={() => applyTemplate(tpl.patch)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-slate-50 hover:bg-nexus-50 border border-slate-200 hover:border-nexus-300 text-slate-600 hover:text-nexus-700 rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-slate-50 hover:bg-controlcenter-50 border border-slate-200 hover:border-controlcenter-300 text-slate-600 hover:text-controlcenter-700 rounded-lg transition-colors"
                 >
                   <tpl.icon size={13} />
                   {tpl.label}
@@ -573,7 +573,7 @@ export default function AlertsPage() {
                         <button
                           onClick={() => toggleRule(rule.id)}
                           className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
-                            rule.enabled ? "bg-nexus-600" : "bg-slate-200"
+                            rule.enabled ? "bg-controlcenter-600" : "bg-slate-200"
                           }`}
                         >
                           <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
@@ -643,7 +643,7 @@ export default function AlertsPage() {
                       <td>
                         <div className="flex items-center gap-1">
                           <button
-                            className="p-1.5 text-slate-400 hover:text-nexus-600 hover:bg-nexus-50 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-controlcenter-600 hover:bg-controlcenter-50 rounded-lg transition-colors"
                             title="Edit"
                           >
                             <Edit size={13} />
@@ -682,8 +682,8 @@ export default function AlertsPage() {
                   onClick={() => setHistSeverityFilter(s)}
                   className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
                     histSeverityFilter === s
-                      ? "bg-nexus-600 border-nexus-600 text-white"
-                      : "bg-white border-slate-200 text-slate-600 hover:border-nexus-300"
+                      ? "bg-controlcenter-600 border-controlcenter-600 text-white"
+                      : "bg-white border-slate-200 text-slate-600 hover:border-controlcenter-300"
                   }`}
                 >
                   {s === "ALL" ? "All Severities" : s}
@@ -696,7 +696,7 @@ export default function AlertsPage() {
                 type="date"
                 value={histDateFilter}
                 onChange={(e) => setHistDateFilter(e.target.value)}
-                className="px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-nexus-500"
+                className="px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-controlcenter-500"
               />
             </div>
           </div>
@@ -768,7 +768,7 @@ export default function AlertsPage() {
             {/* Dialog header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <Plus size={18} className="text-nexus-600" />
+                <Plus size={18} className="text-controlcenter-600" />
                 <h2 className="text-lg font-bold text-slate-900">New Alert Rule</h2>
               </div>
               <button
@@ -903,7 +903,7 @@ export default function AlertsPage() {
                         type="checkbox"
                         checked={form.channels.has(ch)}
                         onChange={() => toggleChannel(ch)}
-                        className="w-4 h-4 rounded border-slate-300 text-nexus-600 focus:ring-nexus-500"
+                        className="w-4 h-4 rounded border-slate-300 text-controlcenter-600 focus:ring-controlcenter-500"
                       />
                       <span className="flex items-center gap-1.5 text-sm text-slate-700">
                         {CHANNEL_ICONS[ch]}
@@ -925,7 +925,7 @@ export default function AlertsPage() {
                       value="all"
                       checked={form.orgScope === "all"}
                       onChange={() => setForm((f) => ({ ...f, orgScope: "all" }))}
-                      className="text-nexus-600 focus:ring-nexus-500"
+                      className="text-controlcenter-600 focus:ring-controlcenter-500"
                     />
                     <span className="text-sm text-slate-700">All deployments</span>
                   </label>
@@ -936,7 +936,7 @@ export default function AlertsPage() {
                       value="specific"
                       checked={form.orgScope === "specific"}
                       onChange={() => setForm((f) => ({ ...f, orgScope: "specific" }))}
-                      className="text-nexus-600 focus:ring-nexus-500"
+                      className="text-controlcenter-600 focus:ring-controlcenter-500"
                     />
                     <span className="text-sm text-slate-700">Specific organizations</span>
                   </label>
@@ -949,7 +949,7 @@ export default function AlertsPage() {
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, enabled: !f.enabled }))}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    form.enabled ? "bg-nexus-600" : "bg-slate-200"
+                    form.enabled ? "bg-controlcenter-600" : "bg-slate-200"
                   }`}
                 >
                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${

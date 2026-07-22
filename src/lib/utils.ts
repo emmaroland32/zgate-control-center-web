@@ -37,7 +37,7 @@ export function truncate(str: string, len: number) {
 /** Get the current user's email from the JWT token in localStorage */
 export function getCurrentUserEmail(): string {
   try {
-    const token = typeof window !== "undefined" ? localStorage.getItem("nexus_token") : null;
+    const token = typeof window !== "undefined" ? localStorage.getItem("controlcenter_token") : null;
     if (!token) return "system";
     const payload = token.split(".")[1];
     const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));

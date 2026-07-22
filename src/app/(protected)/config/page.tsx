@@ -26,7 +26,7 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
-import { configService, organizationService } from "@/services/nexus.service";
+import { configService, organizationService } from "@/services/controlcenter.service";
 import { timeAgo, formatDateTime } from "@/lib/utils";
 import type { ConfigEntry, ConfigTemplate, ConfigSnapshot, ConfigCategory, ConfigValueType } from "@/types";
 
@@ -94,7 +94,7 @@ const CATEGORY_CONFIG: Record<string, { icon: React.ElementType; color: string }
   SECURITY: { icon: Shield, color: "text-purple-600" },
   EMAIL: { icon: Mail, color: "text-emerald-600" },
   STORAGE: { icon: HardDrive, color: "text-amber-600" },
-  FEATURES: { icon: Zap, color: "text-nexus-600" },
+  FEATURES: { icon: Zap, color: "text-controlcenter-600" },
   APP: { icon: Settings, color: "text-slate-600" },
 };
 
@@ -440,8 +440,8 @@ export default function ConfigPage() {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="page-header flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-nexus-100 flex items-center justify-center">
-            <SlidersHorizontal size={18} className="text-nexus-600" />
+          <div className="w-9 h-9 rounded-lg bg-controlcenter-100 flex items-center justify-center">
+            <SlidersHorizontal size={18} className="text-controlcenter-600" />
           </div>
           <h1 className="page-title">Configuration</h1>
         </div>
@@ -501,7 +501,7 @@ export default function ConfigPage() {
             onClick={() => setActiveTab(t.id)}
             className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px
               ${activeTab === t.id
-                ? "border-nexus-600 text-nexus-700"
+                ? "border-controlcenter-600 text-controlcenter-700"
                 : "border-transparent text-slate-500 hover:text-slate-700"
               }`}
           >
@@ -525,7 +525,7 @@ export default function ConfigPage() {
                   onClick={() => setSelectedCategory(cat)}
                   className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left
                     ${selectedCategory === cat
-                      ? "bg-nexus-100 text-nexus-700"
+                      ? "bg-controlcenter-100 text-controlcenter-700"
                       : "text-slate-600 hover:bg-slate-100"
                     }`}
                 >

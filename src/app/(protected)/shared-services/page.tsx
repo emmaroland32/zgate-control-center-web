@@ -24,7 +24,7 @@ import {
   ChevronRight,
   Filter,
 } from "lucide-react";
-import { sharedServicesCatalog } from "@/services/nexus.service";
+import { sharedServicesCatalog } from "@/services/controlcenter.service";
 import { getCurrentUserEmail } from "@/lib/utils";
 import type {
   SharedService,

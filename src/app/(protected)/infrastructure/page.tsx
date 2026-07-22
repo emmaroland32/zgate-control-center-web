@@ -33,7 +33,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { infrastructureService, organizationService } from "@/services/nexus.service";
+import { infrastructureService, organizationService } from "@/services/controlcenter.service";
 import { timeAgo, truncate } from "@/lib/utils";
 import type { ContainerStatus, Organization } from "@/types";
 
@@ -514,8 +514,8 @@ export default function InfrastructurePage() {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="page-header">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-nexus-100 flex items-center justify-center">
-            <Server size={18} className="text-nexus-600" />
+          <div className="w-9 h-9 rounded-lg bg-controlcenter-100 flex items-center justify-center">
+            <Server size={18} className="text-controlcenter-600" />
           </div>
           <h1 className="page-title">Infrastructure</h1>
         </div>
@@ -597,7 +597,7 @@ export default function InfrastructurePage() {
             onClick={() => setActiveTab(t.id)}
             className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px
               ${activeTab === t.id
-                ? "border-nexus-600 text-nexus-700"
+                ? "border-controlcenter-600 text-controlcenter-700"
                 : "border-transparent text-slate-500 hover:text-slate-700"
               }`}
           >
@@ -623,7 +623,7 @@ export default function InfrastructurePage() {
                   ) : (
                     <ChevronDown size={16} className="text-slate-400 shrink-0" />
                   )}
-                  <Globe size={15} className="text-nexus-500 shrink-0" />
+                  <Globe size={15} className="text-controlcenter-500 shrink-0" />
                   <span className="text-sm font-bold text-slate-900">{org.name}</span>
                   <span className="badge badge-gray ml-1">{org.containers.length} containers</span>
                   <span className="badge badge-green ml-1">
@@ -814,7 +814,7 @@ export default function InfrastructurePage() {
                 onClick={() => setResourceOrgId(o.id)}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors
                   ${resourceOrgId === o.id
-                    ? "bg-nexus-600 text-white"
+                    ? "bg-controlcenter-600 text-white"
                     : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
               >

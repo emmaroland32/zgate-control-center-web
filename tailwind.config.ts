@@ -10,7 +10,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        nexus: {
+        controlcenter: {
           50:  "#f0f4ff",
           100: "#e0eaff",
           200: "#c2d4ff",

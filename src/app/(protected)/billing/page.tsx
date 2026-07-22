@@ -24,7 +24,7 @@ import {
   Calendar,
   Banknote,
 } from "lucide-react";
-import { billingService, organizationService } from "@/services/nexus.service";
+import { billingService, organizationService } from "@/services/controlcenter.service";
 import type { Invoice, InvoiceLineItem, BillingAccount, Organization } from "@/types";
 
 

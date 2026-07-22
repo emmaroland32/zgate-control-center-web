@@ -19,7 +19,7 @@ import {
   Database,
   Server,
 } from "lucide-react";
-import { logService, organizationService } from "@/services/nexus.service";
+import { logService, organizationService } from "@/services/controlcenter.service";
 import { timeAgo } from "@/lib/utils";
 import type { LogEntry, LogLevel, LogService, LogQuery } from "@/types";
 
@@ -35,7 +35,7 @@ const LEVEL_CONFIG: Record<LogLevel, { label: string; rowClass: string; textClas
 };
 
 const SERVICE_CONFIG: Record<LogService, { icon: React.ElementType; color: string }> = {
-  BACKEND:  { icon: Server, color: "text-nexus-400" },
+  BACKEND:  { icon: Server, color: "text-controlcenter-400" },
   DATABASE: { icon: Database, color: "text-purple-400" },
   REDIS:    { icon: Wifi, color: "text-emerald-400" },
   NGINX:    { icon: Server, color: "text-cyan-400" },
@@ -293,7 +293,7 @@ export default function LogViewerPage() {
         </div>
         <div className="flex items-center gap-3">
           {hasActiveFilters && (
-            <button onClick={clearFilters} className="text-xs text-nexus-600 hover:text-nexus-700 font-medium transition-colors">
+            <button onClick={clearFilters} className="text-xs text-controlcenter-600 hover:text-controlcenter-700 font-medium transition-colors">
               Clear Filters
             </button>
           )}
@@ -322,7 +322,7 @@ export default function LogViewerPage() {
           <select
             value={selectedDeployment}
             onChange={(e) => setSelectedDeployment(e.target.value)}
-            className="px-3 py-1.5 text-xs bg-slate-800 border border-slate-700 text-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-nexus-500"
+            className="px-3 py-1.5 text-xs bg-slate-800 border border-slate-700 text-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-controlcenter-500"
           >
             {deployments.map((d) => (
               <option key={d.id} value={d.id}>{d.name}</option>
@@ -337,7 +337,7 @@ export default function LogViewerPage() {
               placeholder="Search messages, loggers, traceId..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-7 pr-3 py-1.5 text-xs bg-slate-800 border border-slate-700 text-slate-200 rounded-lg placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-nexus-500"
+              className="w-full pl-7 pr-3 py-1.5 text-xs bg-slate-800 border border-slate-700 text-slate-200 rounded-lg placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-controlcenter-500"
             />
           </div>
 
@@ -348,14 +348,14 @@ export default function LogViewerPage() {
               type="datetime-local"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
-              className="px-2 py-1.5 text-xs bg-slate-800 border border-slate-700 text-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-nexus-500"
+              className="px-2 py-1.5 text-xs bg-slate-800 border border-slate-700 text-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-controlcenter-500"
             />
             <span className="text-slate-500 text-xs">→</span>
             <input
               type="datetime-local"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
-              className="px-2 py-1.5 text-xs bg-slate-800 border border-slate-700 text-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-nexus-500"
+              className="px-2 py-1.5 text-xs bg-slate-800 border border-slate-700 text-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-controlcenter-500"
             />
           </div>
 
@@ -612,7 +612,7 @@ export default function LogViewerPage() {
         {!atBottom && (
           <button
             onClick={scrollToBottom}
-            className="absolute bottom-5 right-5 flex items-center gap-2 px-3 py-2 bg-nexus-600 hover:bg-nexus-700 text-white text-xs font-medium rounded-lg shadow-lg transition-colors"
+            className="absolute bottom-5 right-5 flex items-center gap-2 px-3 py-2 bg-controlcenter-600 hover:bg-controlcenter-700 text-white text-xs font-medium rounded-lg shadow-lg transition-colors"
           >
             <ArrowDown size={13} />
             Scroll to bottom

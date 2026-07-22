@@ -25,7 +25,7 @@ import {
   Landmark,
   Users,
 } from "lucide-react";
-import { licenseService, organizationService } from "@/services/nexus.service";
+import { licenseService, organizationService } from "@/services/controlcenter.service";
 import type { License, Organization } from "@/types";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { toast } from "sonner";
@@ -88,7 +88,7 @@ function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) 
       onClick={handleCopy}
       title={label}
       className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md
-                 text-slate-500 hover:text-nexus-600 hover:bg-nexus-50 transition-colors"
+                 text-slate-500 hover:text-controlcenter-600 hover:bg-controlcenter-50 transition-colors"
     >
       {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
       {copied ? "Copied" : label}
@@ -102,7 +102,7 @@ function ModuleIcon({ moduleId }: { moduleId: string }) {
   const mod = ALL_MODULES.find((m) => m.id === moduleId);
   if (!mod) return <Shield size={16} className="text-slate-400" />;
   const Icon = mod.icon;
-  return <Icon size={16} className="text-nexus-500 shrink-0" />;
+  return <Icon size={16} className="text-controlcenter-500 shrink-0" />;
 }
 
 // ─── Integrity Panel ─────────────────────────────────────────────────────────
@@ -209,7 +209,7 @@ function UploadActivatePanel({ onActivated, organizations }: { onActivated: () =
   return (
     <div className="mt-6 card p-5">
       <div className="flex items-center gap-2 mb-4">
-        <Upload size={16} className="text-nexus-500" />
+        <Upload size={16} className="text-controlcenter-500" />
         <h3 className="text-sm font-semibold text-slate-800">Upload &amp; Activate .lic File</h3>
       </div>
 
@@ -238,8 +238,8 @@ function UploadActivatePanel({ onActivated, organizations }: { onActivated: () =
         className={`
           border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors
           ${dragging
-            ? "border-nexus-400 bg-nexus-50"
-            : "border-slate-200 hover:border-nexus-300 hover:bg-slate-50"
+            ? "border-controlcenter-400 bg-controlcenter-50"
+            : "border-slate-200 hover:border-controlcenter-300 hover:bg-slate-50"
           }
         `}
       >
@@ -399,14 +399,14 @@ function IssueLicenseTab({ organizations, onLicenseIssued }: { organizations: Or
   return (
     <div className="space-y-6">
       {/* Note about signing */}
-      <div className="rounded-lg bg-nexus-50 border border-nexus-200 p-4 text-sm text-nexus-800 flex gap-3">
-        <ShieldCheck size={16} className="mt-0.5 shrink-0 text-nexus-500" />
+      <div className="rounded-lg bg-controlcenter-50 border border-controlcenter-200 p-4 text-sm text-controlcenter-800 flex gap-3">
+        <ShieldCheck size={16} className="mt-0.5 shrink-0 text-controlcenter-500" />
         <div>
           <strong>RSA signing requires the CLI.</strong> The web form builds the license payload and
-          can call the backend&apos;s <code className="font-mono text-xs bg-nexus-100 px-1 py-0.5 rounded">/api/licenses/generate</code> endpoint
-          to produce a signed <code className="font-mono text-xs bg-nexus-100 px-1 py-0.5 rounded">.lic</code> file.
+          can call the backend&apos;s <code className="font-mono text-xs bg-controlcenter-100 px-1 py-0.5 rounded">/api/licenses/generate</code> endpoint
+          to produce a signed <code className="font-mono text-xs bg-controlcenter-100 px-1 py-0.5 rounded">.lic</code> file.
           If the backend is unreachable, use{" "}
-          <code className="font-mono text-xs bg-nexus-100 px-1 py-0.5 rounded">scripts/generate-license.js</code> locally to sign and then upload below.
+          <code className="font-mono text-xs bg-controlcenter-100 px-1 py-0.5 rounded">scripts/generate-license.js</code> locally to sign and then upload below.
         </div>
       </div>
 
@@ -450,7 +450,7 @@ function IssueLicenseTab({ organizations, onLicenseIssued }: { organizations: Or
             </span>
           </h3>
           <div className="flex gap-2">
-            <button onClick={selectAllModules} className="text-xs text-nexus-600 hover:underline">
+            <button onClick={selectAllModules} className="text-xs text-controlcenter-600 hover:underline">
               Select all
             </button>
             <span className="text-slate-300">|</span>
@@ -469,20 +469,20 @@ function IssueLicenseTab({ organizations, onLicenseIssued }: { organizations: Or
                 className={`
                   flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all
                   ${checked
-                    ? "border-nexus-400 bg-nexus-50 shadow-sm"
+                    ? "border-controlcenter-400 bg-controlcenter-50 shadow-sm"
                     : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
                   }
                 `}
               >
                 <input
                   type="checkbox"
-                  className="mt-0.5 accent-nexus-600"
+                  className="mt-0.5 accent-controlcenter-600"
                   checked={checked}
                   onChange={() => toggleModule(mod.id as ModuleId)}
                 />
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <Icon size={13} className={checked ? "text-nexus-500" : "text-slate-400"} />
+                    <Icon size={13} className={checked ? "text-controlcenter-500" : "text-slate-400"} />
                     <span className="text-xs font-semibold text-slate-800">{mod.name}</span>
                   </div>
                   <p className="text-[10px] text-slate-400 leading-tight mt-0.5 line-clamp-2">
@@ -543,7 +543,7 @@ function IssueLicenseTab({ organizations, onLicenseIssued }: { organizations: Or
             onClick={() => setField("bindToFingerprint", !form.bindToFingerprint)}
             className={`
               relative inline-flex h-5 w-9 items-center rounded-full transition-colors
-              ${form.bindToFingerprint ? "bg-nexus-600" : "bg-slate-200"}
+              ${form.bindToFingerprint ? "bg-controlcenter-600" : "bg-slate-200"}
             `}
           >
             <span
@@ -598,7 +598,7 @@ function IssueLicenseTab({ organizations, onLicenseIssued }: { organizations: Or
         <div className="card p-5 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-              <Eye size={15} className="text-nexus-500" />
+              <Eye size={15} className="text-controlcenter-500" />
               Generated License File
             </h3>
             <div className="flex gap-2">
@@ -796,10 +796,10 @@ export default function LicensesPage() {
           </div>
           <div className="stat-card">
             <div className="flex items-center gap-2 text-slate-500">
-              <Package size={15} className="text-nexus-500" />
+              <Package size={15} className="text-controlcenter-500" />
               <span className="stat-label">Modules Licensed</span>
             </div>
-            <div className="stat-value text-nexus-600">{modulesLicensed}</div>
+            <div className="stat-value text-controlcenter-600">{modulesLicensed}</div>
           </div>
         </div>
       )}
@@ -813,7 +813,7 @@ export default function LicensesPage() {
             className={`
               px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px
               ${activeTab === tab
-                ? "border-nexus-600 text-nexus-600"
+                ? "border-controlcenter-600 text-controlcenter-600"
                 : "border-transparent text-slate-500 hover:text-slate-800"
               }
             `}
@@ -908,7 +908,7 @@ export default function LicensesPage() {
                                 <button
                                   title="Copy full hash"
                                   onClick={() => copyHash(lic.licenseFileHash!)}
-                                  className="shrink-0 text-slate-400 hover:text-nexus-600 transition-colors"
+                                  className="shrink-0 text-slate-400 hover:text-controlcenter-600 transition-colors"
                                 >
                                   {copiedHash === lic.licenseFileHash
                                     ? <Check size={13} className="text-emerald-500" />
@@ -940,8 +940,8 @@ export default function LicensesPage() {
                               ) : (
                                 <button
                                   onClick={() => { setActiveTab("issue"); }}
-                                  className="text-xs px-2.5 py-1 rounded-md border border-nexus-200 text-nexus-600
-                                             hover:bg-nexus-50 transition-colors"
+                                  className="text-xs px-2.5 py-1 rounded-md border border-controlcenter-200 text-controlcenter-600
+                                             hover:bg-controlcenter-50 transition-colors"
                                 >
                                   Reactivate
                                 </button>

@@ -27,7 +27,7 @@
   }
 
   .btn-primary {
-    @apply inline-flex items-center gap-2 px-4 py-2 bg-nexus-600 hover:bg-nexus-700
+    @apply inline-flex items-center gap-2 px-4 py-2 bg-controlcenter-600 hover:bg-controlcenter-700
            text-white text-sm font-medium rounded-lg transition-colors;
   }
 
@@ -98,7 +98,7 @@
 
   .input {
     @apply w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white
-           placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-nexus-500 focus:border-transparent;
+           placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-controlcenter-500 focus:border-transparent;
   }
 
   .label {

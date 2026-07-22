@@ -1,7 +1,7 @@
 /**
- * ZGATE Nexus — API Service Layer
+ * ZGATE Control Center — API Service Layer
  * Base URL: NEXT_PUBLIC_API_URL (default: http://localhost:8090)
- * All paths match com.zgate.nexus.controller.* at /api/v1/
+ * All paths match com.zgate.controlcenter.controller.* at /api/v1/
  */
 
 import axios, { AxiosInstance } from "axios";
@@ -14,7 +14,7 @@ function createClient(): AxiosInstance {
 
   client.interceptors.request.use((config) => {
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("nexus_token");
+      const token = localStorage.getItem("controlcenter_token");
       if (token) config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -24,8 +24,8 @@ function createClient(): AxiosInstance {
     (r) => r,
     (err) => {
       if (err.response?.status === 401 && typeof window !== "undefined") {
-        localStorage.removeItem("nexus_token");
-        document.cookie = "nexus_token=; path=/; max-age=0";
+        localStorage.removeItem("controlcenter_token");
+        document.cookie = "controlcenter_token=; path=/; max-age=0";
         window.location.href = "/login";
       }
       return Promise.reject(err);
@@ -299,7 +299,7 @@ export const sharedServicesCatalog = {
   // Usage tracking (called by ZGATE instances — included for completeness)
   track: (orgId: string, serviceCode: string, callCount: number, successCount: number) =>
     api.post(`${V1}/shared-services/track`, { serviceCode, callCount, successCount }, {
-      headers: { "X-Nexus-Org-Id": orgId },
+      headers: { "X-Control-Center-Org-Id": orgId },
     }).then((r) => r.data),
 };
 
@@ -363,7 +363,7 @@ export const userService = {
 };
 
 // ============================================================
-// Health — Spring Actuator (Nexus internal health, not org health)
+// Health — Spring Actuator (Control Center internal health, not org health)
 // For org deployment health use organizationService.getOrgHealth()
 // ============================================================
 export const healthService = {
@@ -602,7 +602,7 @@ export const logService = {
   // Called by org instances — included for completeness / SDK use
   ingest: (orgId: string, events: object[]) =>
     api.post(`${V1}/telemetry/ingest`, events, {
-      headers: { "X-Nexus-Org-Id": orgId },
+      headers: { "X-Control-Center-Org-Id": orgId },
     }).then((r) => r.data),
 
   download: (params?: {

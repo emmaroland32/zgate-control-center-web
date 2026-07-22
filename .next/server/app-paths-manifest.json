@@ -1,8 +1,1 @@
-{
-  "/(protected)/partners/page": "app/(protected)/partners/page.js",
-  "/(protected)/page": "app/(protected)/page.js",
-  "/(protected)/licenses/page": "app/(protected)/licenses/page.js",
-  "/(protected)/setup/page": "app/(protected)/setup/page.js",
-  "/(protected)/deployments/page": "app/(protected)/deployments/page.js",
-  "/(protected)/releases/page": "app/(protected)/releases/page.js"
-}
+{}

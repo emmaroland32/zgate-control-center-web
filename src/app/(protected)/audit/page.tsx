@@ -20,7 +20,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
-import { auditService } from "@/services/nexus.service";
+import { auditService } from "@/services/controlcenter.service";
 import { formatDateTime } from "@/lib/utils";
 import type { AuditEntry } from "@/types";
 
@@ -54,7 +54,7 @@ function getInitials(name: string): string {
 
 function getAvatarColor(email: string): string {
   const colors = [
-    "bg-nexus-600", "bg-emerald-600", "bg-purple-600",
+    "bg-controlcenter-600", "bg-emerald-600", "bg-purple-600",
     "bg-amber-600", "bg-rose-600", "bg-teal-600",
   ];
   let hash = 0;
@@ -218,8 +218,8 @@ export default function AuditPage() {
       {/* ── Header ── */}
       <div className="page-header">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-nexus-100 flex items-center justify-center">
-            <ScrollText size={18} className="text-nexus-600" />
+          <div className="w-9 h-9 rounded-lg bg-controlcenter-100 flex items-center justify-center">
+            <ScrollText size={18} className="text-controlcenter-600" />
           </div>
           <div>
             <h1 className="page-title">Audit Trail</h1>
@@ -585,7 +585,7 @@ export default function AuditPage() {
                     onClick={() => setPage(pageNum)}
                     className={`w-8 h-8 text-xs rounded-lg font-medium transition-colors
                       ${page === pageNum
-                        ? "bg-nexus-600 text-white"
+                        ? "bg-controlcenter-600 text-white"
                         : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
                       }`}
                   >

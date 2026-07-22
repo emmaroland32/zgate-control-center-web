@@ -8,7 +8,7 @@ import {
   GitBranch, Clock, ArrowRight, RefreshCw, Eye,
   Shield, X,
 } from "lucide-react";
-import { releaseService } from "@/services/nexus.service";
+import { releaseService } from "@/services/controlcenter.service";
 import type { SoftwareRelease, ReleaseChannel } from "@/types";
 import { formatDateTime, cn, getCurrentUserEmail } from "@/lib/utils";
 
@@ -114,7 +114,7 @@ function PublishDialog({ onClose, onPublished }: PublishDialogProps) {
         {/* Dialog header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <div className="flex items-center gap-2">
-            <Rocket size={18} className="text-nexus-600" />
+            <Rocket size={18} className="text-controlcenter-600" />
             <span className="font-semibold text-slate-900">Publish New Release</span>
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
@@ -227,8 +227,8 @@ function PublishDialog({ onClose, onPublished }: PublishDialogProps) {
                   className={cn(
                     "px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
                     form.modules.includes(m)
-                      ? "bg-nexus-600 text-white border-nexus-600"
-                      : "bg-white text-slate-600 border-slate-200 hover:border-nexus-400"
+                      ? "bg-controlcenter-600 text-white border-controlcenter-600"
+                      : "bg-white text-slate-600 border-slate-200 hover:border-controlcenter-400"
                   )}
                 >
                   {m}
@@ -267,7 +267,7 @@ function ReleaseNotesDrawer({ release, onClose }: { release: SoftwareRelease; on
       <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
           <div className="flex items-center gap-2">
-            <Package size={16} className="text-nexus-600" />
+            <Package size={16} className="text-controlcenter-600" />
             <span className="font-semibold text-slate-900">Release Notes</span>
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
@@ -325,7 +325,7 @@ function ReleaseNotesDrawer({ release, onClose }: { release: SoftwareRelease; on
               <div className="space-y-1">
                 {release.requiredMigrations.map((m) => (
                   <div key={m} className="flex items-center gap-2 px-2.5 py-1.5 bg-slate-50 rounded-md">
-                    <GitBranch size={12} className="text-nexus-500" />
+                    <GitBranch size={12} className="text-controlcenter-500" />
                     <span className="font-mono text-xs text-slate-700">{m}</span>
                   </div>
                 ))}
@@ -339,7 +339,7 @@ function ReleaseNotesDrawer({ release, onClose }: { release: SoftwareRelease; on
               <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Affected Modules</div>
               <div className="flex flex-wrap gap-1.5">
                 {release.modules.map((m) => (
-                  <span key={m} className="px-2 py-0.5 bg-nexus-50 text-nexus-700 text-xs rounded-full border border-nexus-200">
+                  <span key={m} className="px-2 py-0.5 bg-controlcenter-50 text-controlcenter-700 text-xs rounded-full border border-controlcenter-200">
                     {m}
                   </span>
                 ))}
@@ -456,7 +456,7 @@ export default function ReleasesPage() {
         <>
           {/* Latest release banner */}
           {latestRelease && (
-            <div className="rounded-xl bg-gradient-to-r from-nexus-600 to-nexus-800 p-5 text-white shadow-lg">
+            <div className="rounded-xl bg-gradient-to-r from-controlcenter-600 to-controlcenter-800 p-5 text-white shadow-lg">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -473,7 +473,7 @@ export default function ReleasesPage() {
                         </span>
                       )}
                     </div>
-                    <div className="text-nexus-200 text-sm flex items-center gap-3">
+                    <div className="text-controlcenter-200 text-sm flex items-center gap-3">
                       <span className="flex items-center gap-1">
                         <Tag size={12} />
                         <span className="font-mono">{latestRelease.dockerTag}</span>
@@ -483,7 +483,7 @@ export default function ReleasesPage() {
                         {formatDateTime(latestRelease.publishedAt)}
                       </span>
                     </div>
-                    <p className="text-nexus-200 text-xs mt-2 max-w-xl leading-relaxed line-clamp-2">
+                    <p className="text-controlcenter-200 text-xs mt-2 max-w-xl leading-relaxed line-clamp-2">
                       {latestRelease.releaseNotes}
                     </p>
                   </div>
@@ -491,7 +491,7 @@ export default function ReleasesPage() {
                 <div className="flex-shrink-0 flex flex-col gap-2">
                   <button
                     onClick={() => handleDeploy(latestRelease)}
-                    className="flex items-center gap-2 px-4 py-2 bg-white text-nexus-700 text-sm font-semibold rounded-lg hover:bg-nexus-50 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-white text-controlcenter-700 text-sm font-semibold rounded-lg hover:bg-controlcenter-50 transition-colors"
                   >
                     <Rocket size={14} />
                     Deploy to All
@@ -517,7 +517,7 @@ export default function ReleasesPage() {
                 className={cn(
                   "px-4 py-2.5 text-sm font-medium capitalize transition-colors border-b-2 -mb-px",
                   activeTab === t
-                    ? "border-nexus-600 text-nexus-700"
+                    ? "border-controlcenter-600 text-controlcenter-700"
                     : "border-transparent text-slate-500 hover:text-slate-700"
                 )}
               >
@@ -538,7 +538,7 @@ export default function ReleasesPage() {
                     className={cn(
                       "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
                       channelFilter === f
-                        ? "bg-nexus-100 text-nexus-700 border border-nexus-200"
+                        ? "bg-controlcenter-100 text-controlcenter-700 border border-controlcenter-200"
                         : "text-slate-500 hover:bg-slate-100"
                     )}
                   >
@@ -616,10 +616,10 @@ export default function ReleasesPage() {
                                 </button>
                                 <button
                                   onClick={() => handleDeploy(r)}
-                                  className="p-1.5 hover:bg-nexus-50 rounded-md transition-colors"
+                                  className="p-1.5 hover:bg-controlcenter-50 rounded-md transition-colors"
                                   title="Deploy"
                                 >
-                                  <Rocket size={14} className="text-nexus-600" />
+                                  <Rocket size={14} className="text-controlcenter-600" />
                                 </button>
                                 <button
                                   onClick={() => handleApprove(r.id)}

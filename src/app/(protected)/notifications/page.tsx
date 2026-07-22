@@ -6,7 +6,7 @@ import {
   Activity, Lock, AlertTriangle, CheckCircle2, XCircle, ShieldAlert,
 } from "lucide-react";
 import { timeAgo } from "@/lib/utils";
-import { alertService } from "@/services/nexus.service";
+import { alertService } from "@/services/controlcenter.service";
 import Link from "next/link";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -206,7 +206,7 @@ export default function NotificationsPage() {
           <div className="flex items-center gap-3">
             <h1 className="text-lg font-bold text-slate-900">Notifications</h1>
             {unreadCount > 0 && (
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-nexus-600 text-white text-[10px] font-bold">
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-controlcenter-600 text-white text-[10px] font-bold">
                 {unreadCount > 99 ? "99+" : unreadCount}
               </span>
             )}
@@ -243,8 +243,8 @@ export default function NotificationsPage() {
                 onClick={() => setFilter(key)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
                   filter === key
-                    ? "bg-nexus-600 border-nexus-600 text-white"
-                    : "bg-white border-slate-200 text-slate-600 hover:border-nexus-300 hover:text-nexus-700"
+                    ? "bg-controlcenter-600 border-controlcenter-600 text-white"
+                    : "bg-white border-slate-200 text-slate-600 hover:border-controlcenter-300 hover:text-controlcenter-700"
                 }`}
               >
                 {icon}
@@ -306,7 +306,7 @@ export default function NotificationsPage() {
                               </span>
                               <div className="flex items-center gap-2 shrink-0">
                                 {!n.read && (
-                                  <span className="w-2 h-2 rounded-full bg-nexus-500 shrink-0" title="Unread" />
+                                  <span className="w-2 h-2 rounded-full bg-controlcenter-500 shrink-0" title="Unread" />
                                 )}
                                 <button
                                   onClick={(e) => { e.stopPropagation(); dismiss(n.id); }}
@@ -347,7 +347,7 @@ export default function NotificationsPage() {
         {notifications.length > 0 && (
           <div className="mt-6 flex items-center justify-between text-xs text-slate-400 border-t border-slate-200 pt-4">
             <span>{notifications.length} total &bull; {unreadCount} unread</span>
-            <Link href="/settings?tab=notifications" className="flex items-center gap-1.5 text-nexus-600 hover:text-nexus-700 font-medium">
+            <Link href="/settings?tab=notifications" className="flex items-center gap-1.5 text-controlcenter-600 hover:text-controlcenter-700 font-medium">
               <Bell size={12} />
               Notification Settings
             </Link>

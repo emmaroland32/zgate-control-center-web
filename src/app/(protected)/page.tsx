@@ -9,15 +9,15 @@ import {
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { dashboardService, healthService, deploymentService, organizationService } from "@/services/nexus.service";
+import { dashboardService, healthService, deploymentService, organizationService } from "@/services/controlcenter.service";
 import { formatDate, formatDateTime, timeAgo } from "@/lib/utils";
 import type {
-  NexusDashboardStats, ServiceHealth, License, AuditEntry, Deployment,
+  ControlCenterDashboardStats, ServiceHealth, License, AuditEntry, Deployment,
 } from "@/types";
 
 // ─── Mock / fallback data ────────────────────────────────────────────────────
 
-const EMPTY_STATS: NexusDashboardStats = {
+const EMPTY_STATS: ControlCenterDashboardStats = {
   totalDeployments: 0,
   healthyDeployments: 0,
   degradedDeployments: 0,
@@ -130,7 +130,7 @@ function DeploymentDonut({ healthy, degraded, offline }: { healthy: number; degr
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<NexusDashboardStats | null>(null);
+  const [stats, setStats] = useState<ControlCenterDashboardStats | null>(null);
   const [health, setHealth] = useState<ServiceHealth[]>([]);
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -250,7 +250,7 @@ export default function DashboardPage() {
             <div className="stat-card">
               <div className="flex items-center justify-between mb-1">
                 <span className="stat-label">Total Deployments</span>
-                <Globe size={15} className="text-nexus-400" />
+                <Globe size={15} className="text-controlcenter-400" />
               </div>
               <div className="stat-value">{s.totalDeployments}</div>
               <div className="flex items-center gap-2 mt-2 flex-wrap">
@@ -276,7 +276,7 @@ export default function DashboardPage() {
             <div className="stat-card">
               <div className="flex items-center justify-between mb-1">
                 <span className="stat-label">Organizations</span>
-                <Building2 size={15} className="text-nexus-400" />
+                <Building2 size={15} className="text-controlcenter-400" />
               </div>
               <div className="stat-value">{s.totalOrganizations}</div>
               <div className="text-xs text-slate-400 mt-2">Active tenants</div>
@@ -288,7 +288,7 @@ export default function DashboardPage() {
             <div className="stat-card">
               <div className="flex items-center justify-between mb-1">
                 <span className="stat-label">Licensed Modules</span>
-                <ShieldCheck size={15} className="text-nexus-400" />
+                <ShieldCheck size={15} className="text-controlcenter-400" />
               </div>
               <div className="stat-value">{s.totalActiveLicenses}</div>
               <div className="text-xs text-slate-400 mt-2">
@@ -340,7 +340,7 @@ export default function DashboardPage() {
             <div className="stat-card">
               <div className="flex items-center justify-between mb-1">
                 <span className="stat-label">Active Partners</span>
-                <Users size={15} className="text-nexus-400" />
+                <Users size={15} className="text-controlcenter-400" />
               </div>
               <div className="stat-value">{s.activePartners}</div>
               <div className="text-xs text-slate-400 mt-2">Channel partners</div>
@@ -358,10 +358,10 @@ export default function DashboardPage() {
             <div className="card">
               <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-slate-100">
                 <h2 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                  <Activity size={14} className="text-nexus-500" />
+                  <Activity size={14} className="text-controlcenter-500" />
                   Deployment Health
                 </h2>
-                <a href="/deployments" className="text-xs text-nexus-600 hover:text-nexus-700 flex items-center gap-1">
+                <a href="/deployments" className="text-xs text-controlcenter-600 hover:text-controlcenter-700 flex items-center gap-1">
                   View all <ArrowRight size={11} />
                 </a>
               </div>
@@ -409,10 +409,10 @@ export default function DashboardPage() {
             <div className="table-container">
               <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-slate-100">
                 <h2 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                  <Rocket size={14} className="text-nexus-500" />
+                  <Rocket size={14} className="text-controlcenter-500" />
                   Recent Deployments
                 </h2>
-                <a href="/deployments" className="text-xs text-nexus-600 hover:text-nexus-700 flex items-center gap-1">
+                <a href="/deployments" className="text-xs text-controlcenter-600 hover:text-controlcenter-700 flex items-center gap-1">
                   View all <ArrowRight size={11} />
                 </a>
               </div>
@@ -433,7 +433,7 @@ export default function DashboardPage() {
                       <tr key={d.id}>
                         <td className="font-medium text-slate-800">{d.organizationName}</td>
                         <td>
-                          <span className="font-mono text-xs text-nexus-700 bg-nexus-50 px-1.5 py-0.5 rounded">
+                          <span className="font-mono text-xs text-controlcenter-700 bg-controlcenter-50 px-1.5 py-0.5 rounded">
                             v{d.releaseVersion}
                           </span>
                         </td>
@@ -458,7 +458,7 @@ export default function DashboardPage() {
             {/* Deployments by Status donut */}
             <div className="card px-5 pt-4 pb-3">
               <h2 className="text-sm font-semibold text-slate-800 mb-1 flex items-center gap-2">
-                <Activity size={14} className="text-nexus-500" />
+                <Activity size={14} className="text-controlcenter-500" />
                 Deployments by Status
               </h2>
               {loading ? (
@@ -495,7 +495,7 @@ export default function DashboardPage() {
                   <ShieldCheck size={14} className="text-amber-500" />
                   License Alerts
                 </h2>
-                <a href="/licenses" className="text-xs text-nexus-600 hover:text-nexus-700 flex items-center gap-1">
+                <a href="/licenses" className="text-xs text-controlcenter-600 hover:text-controlcenter-700 flex items-center gap-1">
                   All licenses <ArrowRight size={11} />
                 </a>
               </div>
@@ -545,17 +545,17 @@ export default function DashboardPage() {
             {/* Quick Actions */}
             <div className="card px-5 pt-4 pb-5">
               <h2 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
-                <TrendingUp size={14} className="text-nexus-500" />
+                <TrendingUp size={14} className="text-controlcenter-500" />
                 Quick Actions
               </h2>
               <div className="grid grid-cols-2 gap-2">
                 <a
                   href="/licenses/issue"
                   className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-slate-200
-                             hover:border-nexus-300 hover:bg-nexus-50 transition-all group text-center"
+                             hover:border-controlcenter-300 hover:bg-controlcenter-50 transition-all group text-center"
                 >
-                  <span className="w-8 h-8 rounded-lg bg-nexus-100 group-hover:bg-nexus-200 flex items-center justify-center transition-colors">
-                    <ShieldCheck size={15} className="text-nexus-600" />
+                  <span className="w-8 h-8 rounded-lg bg-controlcenter-100 group-hover:bg-controlcenter-200 flex items-center justify-center transition-colors">
+                    <ShieldCheck size={15} className="text-controlcenter-600" />
                   </span>
                   <span className="text-xs font-medium text-slate-700">Issue License</span>
                 </a>
@@ -595,7 +595,7 @@ export default function DashboardPage() {
             {/* Release Status */}
             <div className="card px-5 py-4">
               <h2 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
-                <Rocket size={14} className="text-nexus-500" />
+                <Rocket size={14} className="text-controlcenter-500" />
                 Latest Release
               </h2>
               {loading ? (
@@ -637,10 +637,10 @@ export default function DashboardPage() {
         <div className="table-container">
           <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-slate-100">
             <h2 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-              <Eye size={14} className="text-nexus-500" />
+              <Eye size={14} className="text-controlcenter-500" />
               Recent Audit Activity
             </h2>
-            <a href="/audit" className="text-xs text-nexus-600 hover:text-nexus-700 flex items-center gap-1">
+            <a href="/audit" className="text-xs text-controlcenter-600 hover:text-controlcenter-700 flex items-center gap-1">
               Full audit trail <ArrowRight size={11} />
             </a>
           </div>
@@ -662,7 +662,7 @@ export default function DashboardPage() {
                   <tr key={entry.id}>
                     <td>
                       <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-nexus-100 text-nexus-700 text-[10px] font-bold
+                        <span className="w-6 h-6 rounded-full bg-controlcenter-100 text-controlcenter-700 text-[10px] font-bold
                                          flex items-center justify-center uppercase shrink-0">
                           {entry.actor.slice(0, 2)}
                         </span>

@@ -40,13 +40,13 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { toast } from "sonner";
-import { reportService } from "@/services/nexus.service";
+import { reportService } from "@/services/controlcenter.service";
 import { formatDateTime, timeAgo } from "@/lib/utils";
 import type { UsageReport, LicenseReport, DeploymentReport } from "@/types";
 
 // ─── Colour palette ────────────────────────────────────────────────────────────
-const NEXUS_BLUE = "#3b6af8";
-const NEXUS_600  = "#2d54d4";
+const CONTROLCENTER_BLUE = "#3b6af8";
+const CONTROLCENTER_600  = "#2d54d4";
 const COLORS = ["#3b6af8", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#06b6d4", "#ec4899", "#84cc16"];
 const PIE_COLORS = { PRODUCTION: "#10b981", STAGING: "#f59e0b", DEVELOPMENT: "#94a3b8" };
 
@@ -267,7 +267,7 @@ export default function ReportsPage() {
     <button
       onClick={() => setActiveTab(tab)}
       className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-        activeTab === tab ? "bg-nexus-600 text-white" : "text-slate-600 hover:bg-slate-100"
+        activeTab === tab ? "bg-controlcenter-600 text-white" : "text-slate-600 hover:bg-slate-100"
       }`}
     >
       {label}
@@ -286,8 +286,8 @@ export default function ReportsPage() {
       {/* ── Header ── */}
       <div className="page-header">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-nexus-100 flex items-center justify-center">
-            <BarChart3 size={18} className="text-nexus-600" />
+          <div className="w-9 h-9 rounded-lg bg-controlcenter-100 flex items-center justify-center">
+            <BarChart3 size={18} className="text-controlcenter-600" />
           </div>
           <div>
             <h1 className="page-title">Reports</h1>
@@ -347,7 +347,7 @@ export default function ReportsPage() {
           ) : (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { icon: Globe, label: "Total Organisations", value: u.totalOrganizations.toString(), color: "text-nexus-600", bg: "bg-nexus-100" },
+                { icon: Globe, label: "Total Organisations", value: u.totalOrganizations.toString(), color: "text-controlcenter-600", bg: "bg-controlcenter-100" },
                 { icon: Activity, label: "Active This Period", value: u.activeOrganizations.toString(), color: "text-emerald-600", bg: "bg-emerald-100" },
                 { icon: Users, label: "Total Users", value: formatK(u.totalUsers), color: "text-purple-600", bg: "bg-purple-100" },
                 { icon: BarChart3, label: "API Calls", value: formatK(u.totalApiCalls), color: "text-amber-600", bg: "bg-amber-100" },
@@ -370,15 +370,15 @@ export default function ReportsPage() {
             {/* Active orgs over time */}
             <div className="card p-5">
               <div className="flex items-center gap-2 mb-4">
-                <TrendingUp size={14} className="text-nexus-600" />
+                <TrendingUp size={14} className="text-controlcenter-600" />
                 <h3 className="text-sm font-bold text-slate-900">Active Organisations Over Time</h3>
               </div>
               <ResponsiveContainer width="100%" height={220}>
                 <AreaChart data={[]} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="gradOrgs" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={NEXUS_BLUE} stopOpacity={0.25} />
-                      <stop offset="95%" stopColor={NEXUS_BLUE} stopOpacity={0} />
+                      <stop offset="5%" stopColor={CONTROLCENTER_BLUE} stopOpacity={0.25} />
+                      <stop offset="95%" stopColor={CONTROLCENTER_BLUE} stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -389,7 +389,7 @@ export default function ReportsPage() {
                     type="monotone"
                     dataKey="orgs"
                     name="Active Orgs"
-                    stroke={NEXUS_BLUE}
+                    stroke={CONTROLCENTER_BLUE}
                     strokeWidth={2}
                     fill="url(#gradOrgs)"
                     dot={false}
@@ -402,7 +402,7 @@ export default function ReportsPage() {
             {/* Daily active users */}
             <div className="card p-5">
               <div className="flex items-center gap-2 mb-4">
-                <Users size={14} className="text-nexus-600" />
+                <Users size={14} className="text-controlcenter-600" />
                 <h3 className="text-sm font-bold text-slate-900">Daily Active Users</h3>
               </div>
               <ResponsiveContainer width="100%" height={220}>
@@ -411,7 +411,7 @@ export default function ReportsPage() {
                   <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} interval={6} />
                   <YAxis tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} tickFormatter={formatK} />
                   <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number) => [formatK(v), "Users"]} />
-                  <Bar dataKey="users" name="DAU" fill={NEXUS_600} radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="users" name="DAU" fill={CONTROLCENTER_600} radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -422,7 +422,7 @@ export default function ReportsPage() {
             {/* Module usage horizontal bar */}
             <div className="card p-5">
               <div className="flex items-center gap-2 mb-4">
-                <Database size={14} className="text-nexus-600" />
+                <Database size={14} className="text-controlcenter-600" />
                 <h3 className="text-sm font-bold text-slate-900">Module Usage</h3>
               </div>
               <ResponsiveContainer width="100%" height={300}>
@@ -437,7 +437,7 @@ export default function ReportsPage() {
                   <Tooltip contentStyle={TOOLTIP_STYLE} />
                   <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
                   <Bar dataKey="licensed" name="Licensed" fill="#c7d7fd" radius={[0, 3, 3, 0]} />
-                  <Bar dataKey="active" name="Active" fill={NEXUS_BLUE} radius={[0, 3, 3, 0]} />
+                  <Bar dataKey="active" name="Active" fill={CONTROLCENTER_BLUE} radius={[0, 3, 3, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -445,7 +445,7 @@ export default function ReportsPage() {
             {/* Deployment distribution pie */}
             <div className="card p-5">
               <div className="flex items-center gap-2 mb-4">
-                <Globe size={14} className="text-nexus-600" />
+                <Globe size={14} className="text-controlcenter-600" />
                 <h3 className="text-sm font-bold text-slate-900">Deployment Distribution</h3>
               </div>
               <ResponsiveContainer width="100%" height={260}>
@@ -531,8 +531,8 @@ export default function ReportsPage() {
               {
                 label: "Utilization",
                 value: `${Math.round((l.activeLicenses / l.totalLicenses) * 100)}%`,
-                color: "text-nexus-600",
-                bg: "bg-nexus-100",
+                color: "text-controlcenter-600",
+                bg: "bg-controlcenter-100",
                 icon: Activity,
               },
             ].map(({ label, value, color, bg, icon: Icon }) => (
@@ -553,7 +553,7 @@ export default function ReportsPage() {
             {/* Licenses by module bar */}
             <div className="card p-5">
               <div className="flex items-center gap-2 mb-4">
-                <Shield size={14} className="text-nexus-600" />
+                <Shield size={14} className="text-controlcenter-600" />
                 <h3 className="text-sm font-bold text-slate-900">Licenses by Module</h3>
               </div>
               <ResponsiveContainer width="100%" height={300}>
@@ -568,7 +568,7 @@ export default function ReportsPage() {
                   <Tooltip contentStyle={TOOLTIP_STYLE} />
                   <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
                   <Bar dataKey="licensed" name="Licensed" fill="#c7d7fd" radius={[0, 3, 3, 0]} />
-                  <Bar dataKey="active" name="Active Users" fill={NEXUS_BLUE} radius={[0, 3, 3, 0]} />
+                  <Bar dataKey="active" name="Active Users" fill={CONTROLCENTER_BLUE} radius={[0, 3, 3, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -576,7 +576,7 @@ export default function ReportsPage() {
             {/* License status donut */}
             <div className="card p-5">
               <div className="flex items-center gap-2 mb-4">
-                <Shield size={14} className="text-nexus-600" />
+                <Shield size={14} className="text-controlcenter-600" />
                 <h3 className="text-sm font-bold text-slate-900">License Status Distribution</h3>
               </div>
               <ResponsiveContainer width="100%" height={260}>
@@ -651,14 +651,14 @@ export default function ReportsPage() {
                     <td className="text-xs text-slate-500">{row.licensed}</td>
                     <td className="text-xs text-slate-500">{row.active}</td>
                     <td>
-                      <span className={`text-xs font-bold ${row.utilization >= 90 ? "text-emerald-600" : row.utilization >= 70 ? "text-nexus-600" : "text-amber-600"}`}>
+                      <span className={`text-xs font-bold ${row.utilization >= 90 ? "text-emerald-600" : row.utilization >= 70 ? "text-controlcenter-600" : "text-amber-600"}`}>
                         {row.utilization}%
                       </span>
                     </td>
                     <td className="w-32">
                       <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                         <div
-                          className={`h-full rounded-full ${row.utilization >= 90 ? "bg-emerald-500" : row.utilization >= 70 ? "bg-nexus-500" : "bg-amber-400"}`}
+                          className={`h-full rounded-full ${row.utilization >= 90 ? "bg-emerald-500" : row.utilization >= 70 ? "bg-controlcenter-500" : "bg-amber-400"}`}
                           style={{ width: `${row.utilization}%` }}
                         />
                       </div>
@@ -682,7 +682,7 @@ export default function ReportsPage() {
               { label: "Total", value: d.totalDeployments.toString(), color: "text-slate-900" },
               { label: "Successful", value: d.successfulDeployments.toString(), color: "text-emerald-600" },
               { label: "Failed", value: d.failedDeployments.toString(), color: "text-red-600" },
-              { label: "Avg Duration", value: `${d.averageDurationMinutes.toFixed(1)}m`, color: "text-nexus-600" },
+              { label: "Avg Duration", value: `${d.averageDurationMinutes.toFixed(1)}m`, color: "text-controlcenter-600" },
             ].map(({ label, value, color }) => (
               <div key={label} className="stat-card">
                 <span className="stat-label">{label}</span>
@@ -696,7 +696,7 @@ export default function ReportsPage() {
             {/* Deployments per day stacked */}
             <div className="card p-5">
               <div className="flex items-center gap-2 mb-4">
-                <Activity size={14} className="text-nexus-600" />
+                <Activity size={14} className="text-controlcenter-600" />
                 <h3 className="text-sm font-bold text-slate-900">Deployments per Day</h3>
               </div>
               <ResponsiveContainer width="100%" height={220}>
@@ -715,7 +715,7 @@ export default function ReportsPage() {
             {/* Version distribution */}
             <div className="card p-5">
               <div className="flex items-center gap-2 mb-4">
-                <Database size={14} className="text-nexus-600" />
+                <Database size={14} className="text-controlcenter-600" />
                 <h3 className="text-sm font-bold text-slate-900">Version Distribution</h3>
               </div>
               <ResponsiveContainer width="100%" height={220}>
@@ -829,7 +829,7 @@ export default function ReportsPage() {
           {/* Builder card */}
           <div className="card p-5">
             <div className="flex items-center gap-2 mb-5">
-              <Filter size={15} className="text-nexus-600" />
+              <Filter size={15} className="text-controlcenter-600" />
               <h2 className="text-sm font-bold text-slate-900">Custom Report Builder</h2>
             </div>
 
@@ -861,7 +861,7 @@ export default function ReportsPage() {
                       onClick={() => setCustomChartType(ct)}
                       className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
                         customChartType === ct
-                          ? "bg-nexus-600 text-white border-nexus-600"
+                          ? "bg-controlcenter-600 text-white border-controlcenter-600"
                           : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
                       }`}
                     >
@@ -904,7 +904,7 @@ export default function ReportsPage() {
                     onClick={() => toggleDimension(dim)}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
                       customDimensions.includes(dim)
-                        ? "bg-nexus-600 text-white border-nexus-600"
+                        ? "bg-controlcenter-600 text-white border-controlcenter-600"
                         : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
                     }`}
                   >
@@ -952,7 +952,7 @@ export default function ReportsPage() {
           {customReportGenerated && (
             <div className="card p-5 space-y-4">
               <div className="flex items-center gap-2">
-                <Activity size={14} className="text-nexus-600" />
+                <Activity size={14} className="text-controlcenter-600" />
                 <h3 className="text-sm font-bold text-slate-900">
                   {customCategory} — {customDimensions.join(", ")} ({customDateFrom} to {customDateTo})
                 </h3>
@@ -969,7 +969,7 @@ export default function ReportsPage() {
                       <Tooltip contentStyle={TOOLTIP_STYLE} />
                       <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
                       <Bar dataKey="licensed" name="Licensed" fill="#c7d7fd" radius={[3, 3, 0, 0]} />
-                      <Bar dataKey="active" name="Active" fill={NEXUS_BLUE} radius={[3, 3, 0, 0]} />
+                      <Bar dataKey="active" name="Active" fill={CONTROLCENTER_BLUE} radius={[3, 3, 0, 0]} />
                     </BarChart>
                   ) : customChartType === "Line" ? (
                     <LineChart data={successRateData.slice(0, 20)} margin={{ top: 4, right: 12, left: -12, bottom: 0 }}>
@@ -978,7 +978,7 @@ export default function ReportsPage() {
                       <YAxis tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} domain={[60, 100]} tickFormatter={(v) => `${v}%`} />
                       <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number) => [`${v.toFixed(1)}%`]} />
                       <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-                      <Line type="monotone" dataKey="rate" name={customCategory} stroke={NEXUS_BLUE} strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} />
+                      <Line type="monotone" dataKey="rate" name={customCategory} stroke={CONTROLCENTER_BLUE} strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} />
                     </LineChart>
                   ) : (
                     <PieChart>
@@ -1019,7 +1019,7 @@ export default function ReportsPage() {
                         <td className="text-xs font-medium">{row.module}</td>
                         <td className="text-xs text-slate-500">{row.licensed}</td>
                         <td className="text-xs text-slate-500">{row.active}</td>
-                        <td className="text-xs font-bold text-nexus-600">
+                        <td className="text-xs font-bold text-controlcenter-600">
                           {Math.round((row.active / row.licensed) * 100)}%
                         </td>
                       </tr>
@@ -1066,7 +1066,7 @@ export default function ReportsPage() {
                       <td>
                         <div className="flex items-center gap-2">
                           <button
-                            className="text-slate-400 hover:text-nexus-600 transition-colors"
+                            className="text-slate-400 hover:text-controlcenter-600 transition-colors"
                             title="Run"
                             onClick={handleGenerateReport}
                           >

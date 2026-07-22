@@ -203,7 +203,7 @@ export default function QuotasPage() {
                     <td className="px-5 py-3">
                       <Link
                         href={`/organizations/${q.organizationId}`}
-                        className="text-slate-700 hover:text-nexus-700 inline-flex items-center gap-1"
+                        className="text-slate-700 hover:text-controlcenter-700 inline-flex items-center gap-1"
                       >
                         <Building2 size={11} />
                         {q.organizationName}

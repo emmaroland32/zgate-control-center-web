@@ -27,7 +27,7 @@ import {
   Link,
   Zap,
 } from "lucide-react";
-import { databaseService, organizationService } from "@/services/nexus.service";
+import { databaseService, organizationService } from "@/services/controlcenter.service";
 import { formatDateTime, timeAgo } from "@/lib/utils";
 import type { DatabaseHealth, DatabaseBackup, FlywayMigration, SchemaInfo, Organization } from "@/types";
 
@@ -254,7 +254,7 @@ export default function DatabasePage() {
       onClick={() => setActiveTab(tab)}
       className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
         activeTab === tab
-          ? "bg-nexus-600 text-white"
+          ? "bg-controlcenter-600 text-white"
           : "text-slate-600 hover:bg-slate-100"
       }`}
     >
@@ -286,8 +286,8 @@ export default function DatabasePage() {
       {/* ── Header ── */}
       <div className="page-header">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-nexus-100 flex items-center justify-center">
-            <Database size={18} className="text-nexus-600" />
+          <div className="w-9 h-9 rounded-lg bg-controlcenter-100 flex items-center justify-center">
+            <Database size={18} className="text-controlcenter-600" />
           </div>
           <div>
             <h1 className="page-title">Database</h1>
@@ -417,7 +417,7 @@ export default function DatabasePage() {
           <div className="space-y-4">
             <div className="card p-5">
               <div className="flex items-center gap-2 mb-4">
-                <Activity size={15} className="text-nexus-600" />
+                <Activity size={15} className="text-controlcenter-600" />
                 <h2 className="text-sm font-bold text-slate-900">Health Metrics</h2>
               </div>
 
@@ -452,7 +452,7 @@ export default function DatabasePage() {
                       h.activeConnections / h.maxConnections > 0.8
                         ? "bg-amber-500"
                         : h.activeConnections / h.maxConnections > 0.6
-                        ? "bg-nexus-500"
+                        ? "bg-controlcenter-500"
                         : "bg-emerald-500"
                     }`}
                     style={{ width: `${(h.activeConnections / h.maxConnections) * 100}%` }}
@@ -494,7 +494,7 @@ export default function DatabasePage() {
             <div className="card p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Shield size={15} className="text-nexus-600" />
+                  <Shield size={15} className="text-controlcenter-600" />
                   <h2 className="text-sm font-bold text-slate-900">Schema Validation</h2>
                 </div>
                 <button
@@ -630,7 +630,7 @@ export default function DatabasePage() {
                   key={f}
                   onClick={() => setMigFilter(f)}
                   className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                    migFilter === f ? "bg-nexus-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    migFilter === f ? "bg-controlcenter-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                   }`}
                 >
                   {f}
@@ -696,7 +696,7 @@ export default function DatabasePage() {
                     <td>
                       {m.state === "PENDING" || m.state === "FAILED" ? (
                         <button
-                          className="text-xs text-nexus-600 hover:text-nexus-700 font-medium flex items-center gap-1"
+                          className="text-xs text-controlcenter-600 hover:text-controlcenter-700 font-medium flex items-center gap-1"
                           onClick={() => setSqlPanelScript(m.script)}
                         >
                           <Eye size={11} /> View SQL
@@ -772,10 +772,10 @@ export default function DatabasePage() {
 
           {/* Create backup dialog */}
           {showCreateBackup && (
-            <div className="card p-5 border-nexus-200 bg-nexus-50">
+            <div className="card p-5 border-controlcenter-200 bg-controlcenter-50">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Save size={15} className="text-nexus-600" />
+                  <Save size={15} className="text-controlcenter-600" />
                   <h3 className="text-sm font-bold text-slate-900">Create Backup</h3>
                 </div>
                 <button onClick={() => setShowCreateBackup(false)} className="text-slate-400 hover:text-slate-600">
@@ -793,7 +793,7 @@ export default function DatabasePage() {
                         onClick={() => setBackupType(t)}
                         className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
                           backupType === t
-                            ? "bg-nexus-600 text-white border-nexus-600"
+                            ? "bg-controlcenter-600 text-white border-controlcenter-600"
                             : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
                         }`}
                       >
@@ -902,7 +902,7 @@ export default function DatabasePage() {
                           {b.status === "SUCCESS" && (
                             <>
                               <button
-                                className="text-slate-400 hover:text-nexus-600 transition-colors"
+                                className="text-slate-400 hover:text-controlcenter-600 transition-colors"
                                 title="Download"
                               >
                                 <Download size={13} />

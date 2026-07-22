@@ -40,7 +40,7 @@ import {
   PartyPopper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { releaseService, licenseService, databaseService } from "@/services/nexus.service";
+import { releaseService, licenseService, databaseService } from "@/services/controlcenter.service";
 import type { WizardState, WizardStep, DeploymentType, DeploymentEnv, SoftwareRelease } from "@/types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -488,12 +488,12 @@ function StepType({
               className={cn(
                 "relative flex flex-col items-start gap-4 p-6 rounded-xl border-2 text-left transition-all",
                 selected
-                  ? "border-nexus-600 bg-nexus-50 shadow-md"
-                  : "border-slate-200 bg-white hover:border-nexus-300 hover:bg-slate-50"
+                  ? "border-controlcenter-600 bg-controlcenter-50 shadow-md"
+                  : "border-slate-200 bg-white hover:border-controlcenter-300 hover:bg-slate-50"
               )}
             >
               {opt.recommended && (
-                <span className="absolute top-3 right-3 badge bg-nexus-100 text-nexus-700">
+                <span className="absolute top-3 right-3 badge bg-controlcenter-100 text-controlcenter-700">
                   Recommended
                 </span>
               )}
@@ -506,7 +506,7 @@ function StepType({
               </div>
               {selected && (
                 <div className="absolute top-3 left-3">
-                  <div className="w-5 h-5 rounded-full bg-nexus-600 flex items-center justify-center">
+                  <div className="w-5 h-5 rounded-full bg-controlcenter-600 flex items-center justify-center">
                     <Check size={12} className="text-white" />
                   </div>
                 </div>
@@ -571,7 +571,7 @@ function StepOrganization({
             {org.slug && (
               <div className="mt-1.5 flex items-center gap-2 text-xs text-slate-500">
                 <Globe size={13} />
-                <span>Your deployment URL: <span className="text-nexus-600 font-medium">https://{org.slug}.zgate.io</span></span>
+                <span>Your deployment URL: <span className="text-controlcenter-600 font-medium">https://{org.slug}.zgate.io</span></span>
               </div>
             )}
           </FormField>
@@ -1105,7 +1105,7 @@ function StepConfiguration({
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
                 type="checkbox"
-                className="w-4 h-4 rounded border-slate-300 text-nexus-600"
+                className="w-4 h-4 rounded border-slate-300 text-controlcenter-600"
                 checked={config.smtpTls === "true"}
                 onChange={(e) => update("smtpTls", e.target.checked ? "true" : "false")}
               />
@@ -1194,7 +1194,7 @@ function StepModules({
           <button
             key={bundle.label}
             onClick={() => applyBundle(bundle.modules)}
-            className="px-3 py-1.5 text-sm font-medium rounded-lg border border-nexus-200 text-nexus-700 bg-nexus-50 hover:bg-nexus-100 transition-colors"
+            className="px-3 py-1.5 text-sm font-medium rounded-lg border border-controlcenter-200 text-controlcenter-700 bg-controlcenter-50 hover:bg-controlcenter-100 transition-colors"
           >
             {bundle.label}
           </button>
@@ -1202,7 +1202,7 @@ function StepModules({
         <div className="flex-1" />
         <button
           onClick={() => onChange(MODULES.map((m) => m.id))}
-          className="text-sm text-nexus-600 hover:underline"
+          className="text-sm text-controlcenter-600 hover:underline"
         >
           Select All
         </button>
@@ -1227,7 +1227,7 @@ function StepModules({
               className={cn(
                 "relative flex flex-col gap-3 p-4 rounded-xl border-2 text-left transition-all",
                 isSelected
-                  ? "border-nexus-500 bg-nexus-50"
+                  ? "border-controlcenter-500 bg-controlcenter-50"
                   : "border-slate-200 bg-white hover:border-slate-300",
                 isCore && "cursor-default"
               )}
@@ -1239,7 +1239,7 @@ function StepModules({
                 <div className={cn(
                   "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
                   isSelected
-                    ? "border-nexus-600 bg-nexus-600"
+                    ? "border-controlcenter-600 bg-controlcenter-600"
                     : "border-slate-300 bg-white"
                 )}>
                   {isSelected && <Check size={11} className="text-white" />}
@@ -1263,7 +1263,7 @@ function StepModules({
       </div>
 
       <div className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600">
-        <Package size={15} className="shrink-0 text-nexus-600" />
+        <Package size={15} className="shrink-0 text-controlcenter-600" />
         <span>{selected.length} of {MODULES.length} modules selected</span>
       </div>
     </div>
@@ -1297,7 +1297,7 @@ function StepReview({
         <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">{title}</h3>
         <button
           onClick={() => onEdit(step)}
-          className="text-xs text-nexus-600 hover:underline font-medium flex items-center gap-1"
+          className="text-xs text-controlcenter-600 hover:underline font-medium flex items-center gap-1"
         >
           Edit
         </button>
@@ -1364,7 +1364,7 @@ function StepReview({
       <div className="card p-5 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Licensed Modules</h3>
-          <button onClick={() => onEdit("modules")} className="text-xs text-nexus-600 hover:underline font-medium">Edit</button>
+          <button onClick={() => onEdit("modules")} className="text-xs text-controlcenter-600 hover:underline font-medium">Edit</button>
         </div>
         <div className="flex flex-wrap gap-2">
           {selectedModules.map((m) => {
@@ -1474,7 +1474,7 @@ function StepDeploy({ state, onArtifactsGenerated }: {
                 className={cn(
                   "px-4 py-2 text-sm font-mono font-medium border-b-2 -mb-px transition-colors",
                   artifactTab === key
-                    ? "border-nexus-600 text-nexus-700"
+                    ? "border-controlcenter-600 text-controlcenter-700"
                     : "border-transparent text-slate-500 hover:text-slate-700"
                 )}
               >
@@ -1499,7 +1499,7 @@ function StepDeploy({ state, onArtifactsGenerated }: {
                 <>Access backend at: <code className="font-mono text-xs bg-slate-100 px-1 py-0.5 rounded">{healthUrl}</code></>,
               ].map((step, i) => (
                 <li key={i} className="flex items-start gap-3 text-sm text-slate-700">
-                  <span className="w-6 h-6 rounded-full bg-nexus-100 text-nexus-700 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="w-6 h-6 rounded-full bg-controlcenter-100 text-controlcenter-700 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
                     {i + 1}
                   </span>
                   <span className="leading-relaxed">{step}</span>
@@ -1723,11 +1723,11 @@ function StepLicense({
           className={cn(
             "flex flex-col items-center justify-center gap-3 p-10 rounded-xl border-2 border-dashed cursor-pointer transition-colors",
             dragOver
-              ? "border-nexus-500 bg-nexus-50"
-              : "border-slate-300 bg-slate-50 hover:border-nexus-400 hover:bg-slate-100"
+              ? "border-controlcenter-500 bg-controlcenter-50"
+              : "border-slate-300 bg-slate-50 hover:border-controlcenter-400 hover:bg-slate-100"
           )}
         >
-          <Upload size={28} className={dragOver ? "text-nexus-600" : "text-slate-400"} />
+          <Upload size={28} className={dragOver ? "text-controlcenter-600" : "text-slate-400"} />
           <div className="text-center">
             <p className="text-sm font-medium text-slate-700">Drop your <code className="font-mono text-xs">.lic</code> file here</p>
             <p className="text-xs text-slate-500 mt-1">or click to browse</p>
@@ -1783,21 +1783,21 @@ function StepIndicator({ currentStep }: { currentStep: WizardStep }) {
             <div className="flex flex-col items-center gap-1.5">
               <div className={cn(
                 "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors",
-                isDone    ? "bg-nexus-600 text-white"      : "",
-                isCurrent ? "bg-nexus-600 text-white ring-4 ring-nexus-100" : "",
+                isDone    ? "bg-controlcenter-600 text-white"      : "",
+                isCurrent ? "bg-controlcenter-600 text-white ring-4 ring-controlcenter-100" : "",
                 isUpcoming ? "bg-slate-200 text-slate-500" : "",
               )}>
                 {isDone ? <Check size={14} /> : i + 1}
               </div>
               <span className={cn(
                 "text-xs font-medium whitespace-nowrap",
-                isCurrent ? "text-nexus-700" : isDone ? "text-slate-600" : "text-slate-400"
+                isCurrent ? "text-controlcenter-700" : isDone ? "text-slate-600" : "text-slate-400"
               )}>
                 {step.label}
               </span>
             </div>
             {i < WIZARD_STEPS.length - 1 && (
-              <div className={cn("flex-1 h-0.5 mx-2 mt-[-14px]", i < current ? "bg-nexus-600" : "bg-slate-200")} />
+              <div className={cn("flex-1 h-0.5 mx-2 mt-[-14px]", i < current ? "bg-controlcenter-600" : "bg-slate-200")} />
             )}
           </div>
         );
@@ -1903,7 +1903,7 @@ export default function SetupWizardPage() {
       {/* Top bar */}
       <div className="sticky top-0 z-20 bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-nexus-600 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-controlcenter-600 flex items-center justify-center">
             <FileCode2 size={16} className="text-white" />
           </div>
           <div>
@@ -2024,7 +2024,7 @@ export default function SetupWizardPage() {
                 key={s.key}
                 className={cn(
                   "w-1.5 h-1.5 rounded-full transition-colors",
-                  i === currentIndex ? "bg-nexus-600 w-4" : i < currentIndex ? "bg-nexus-300" : "bg-slate-200"
+                  i === currentIndex ? "bg-controlcenter-600 w-4" : i < currentIndex ? "bg-controlcenter-300" : "bg-slate-200"
                 )}
               />
             ))}

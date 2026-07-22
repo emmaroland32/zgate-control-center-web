@@ -8,7 +8,7 @@ import {
   X, ChevronRight, Edit, Trash2, RefreshCw, ExternalLink,
   CheckCircle2, AlertTriangle, XCircle,
 } from "lucide-react";
-import { organizationService, licenseService, deploymentService, releaseService, partnerService } from "@/services/nexus.service";
+import { organizationService, licenseService, deploymentService, releaseService, partnerService } from "@/services/controlcenter.service";
 import { formatDate, timeAgo } from "@/lib/utils";
 import type { Organization, DeploymentStatus, DeploymentEnv, Partner } from "@/types";
 
@@ -414,8 +414,8 @@ function DetailPanel({ org, onClose, partnerName, onRefresh, onEdit, latestRelea
         {/* Panel Header */}
         <div className="flex items-start justify-between px-5 pt-5 pb-4 border-b border-slate-100">
           <div className="flex items-start gap-3 min-w-0">
-            <div className="w-10 h-10 bg-nexus-100 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Building2 size={18} className="text-nexus-600" />
+            <div className="w-10 h-10 bg-controlcenter-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Building2 size={18} className="text-controlcenter-600" />
             </div>
             <div className="min-w-0">
               <h3 className="font-semibold text-slate-900 text-sm truncate">{org.name}</h3>
@@ -440,7 +440,7 @@ function DetailPanel({ org, onClose, partnerName, onRefresh, onEdit, latestRelea
         {/* Quick stats */}
         <div className="grid grid-cols-4 divide-x divide-slate-100 border-b border-slate-100">
           {[
-            { label: "Active Users",   value: org.activeUsers,               icon: <Users size={13} className="text-nexus-500" /> },
+            { label: "Active Users",   value: org.activeUsers,               icon: <Users size={13} className="text-controlcenter-500" /> },
             { label: "Modules",        value: (org.licensedModules || []).length,     icon: <Shield size={13} className="text-emerald-500" /> },
             { label: "Version",        value: org.deployedVersion,            icon: <Globe size={13} className="text-slate-400" /> },
             { label: "Uptime",         value: org.status === "OFFLINE" ? "—" : "99.7%", icon: <Clock size={13} className="text-amber-500" /> },
@@ -461,7 +461,7 @@ function DetailPanel({ org, onClose, partnerName, onRefresh, onEdit, latestRelea
               onClick={() => setTab(id)}
               className={`py-3 px-3 text-xs font-medium border-b-2 transition-colors -mb-px ${
                 tab === id
-                  ? "border-nexus-600 text-nexus-700"
+                  ? "border-controlcenter-600 text-controlcenter-700"
                   : "border-transparent text-slate-500 hover:text-slate-700"
               }`}
             >
@@ -489,7 +489,7 @@ function DetailPanel({ org, onClose, partnerName, onRefresh, onEdit, latestRelea
                 <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Deployment</h4>
                 <InfoRow label="Backend URL" value={
                   <a href={org.backendUrl} target="_blank" rel="noreferrer"
-                     className="text-nexus-600 hover:underline flex items-center gap-1">
+                     className="text-controlcenter-600 hover:underline flex items-center gap-1">
                     {org.backendUrl} <ExternalLink size={11} />
                   </a>
                 } />
@@ -863,7 +863,7 @@ export default function OrganizationsPage() {
       <div className="page-header flex-wrap gap-3">
         <div>
           <h1 className="page-title flex items-center gap-2">
-            <Building2 size={20} className="text-nexus-600" />
+            <Building2 size={20} className="text-controlcenter-600" />
             Organizations
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">Manage all ZGATE deployed instances</p>
@@ -930,8 +930,8 @@ export default function OrganizationsPage() {
         <StatCard
           label="Total Organizations"
           value={stats.total}
-          icon={<Building2 size={18} className="text-nexus-500" />}
-          color="nexus"
+          icon={<Building2 size={18} className="text-controlcenter-500" />}
+          color="controlcenter"
         />
         <StatCard
           label="Healthy"
@@ -973,7 +973,7 @@ export default function OrganizationsPage() {
           <p className="text-xs text-slate-500">
             {loading ? "Loading…" : `${filtered.length} organization${filtered.length !== 1 ? "s" : ""}`}
             {(statusFilter !== "ALL" || envFilter !== "ALL" || search) && (
-              <span className="ml-1 text-nexus-600">(filtered)</span>
+              <span className="ml-1 text-controlcenter-600">(filtered)</span>
             )}
           </p>
           {(statusFilter !== "ALL" || envFilter !== "ALL" || search) && (
@@ -1027,8 +1027,8 @@ export default function OrganizationsPage() {
                     {/* Organization */}
                     <td>
                       <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 bg-nexus-50 border border-nexus-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <Building2 size={14} className="text-nexus-500" />
+                        <div className="w-8 h-8 bg-controlcenter-50 border border-controlcenter-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Building2 size={14} className="text-controlcenter-500" />
                         </div>
                         <div>
                           <p className="font-medium text-slate-900 text-xs leading-tight">{org.name}</p>
@@ -1151,10 +1151,10 @@ function StatCard({
   label: string;
   value: number;
   icon: React.ReactNode;
-  color: "nexus" | "emerald" | "amber" | "red";
+  color: "controlcenter" | "emerald" | "amber" | "red";
 }) {
   const ring: Record<string, string> = {
-    nexus:   "ring-nexus-100",
+    controlcenter:   "ring-controlcenter-100",
     emerald: "ring-emerald-100",
     amber:   "ring-amber-100",
     red:     "ring-red-100",

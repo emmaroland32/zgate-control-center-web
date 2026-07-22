@@ -25,7 +25,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { organizationService } from "@/services/nexus.service";
+import { organizationService } from "@/services/controlcenter.service";
 import { timeAgo } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -230,9 +230,9 @@ export default function HealthPage() {
           <button
             onClick={() => setAutoRefresh((v) => !v)}
             className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border transition-colors
-              ${autoRefresh ? "bg-nexus-50 border-nexus-300 text-nexus-700" : "btn-secondary"}`}
+              ${autoRefresh ? "bg-controlcenter-50 border-controlcenter-300 text-controlcenter-700" : "btn-secondary"}`}
           >
-            <span className={`w-2 h-2 rounded-full ${autoRefresh ? "bg-nexus-500 animate-pulse" : "bg-slate-300"}`} />
+            <span className={`w-2 h-2 rounded-full ${autoRefresh ? "bg-controlcenter-500 animate-pulse" : "bg-slate-300"}`} />
             {autoRefresh ? "Auto (30s)" : "Manual"}
           </button>
           <button onClick={fetchHealth} disabled={loading} className="btn-secondary">
@@ -325,7 +325,7 @@ export default function HealthPage() {
                 <div
                   key={dep.id}
                   className={`card p-5 space-y-4 cursor-pointer transition-all
-                    ${isSelected ? "ring-2 ring-nexus-500 ring-offset-1" : "hover:shadow-md"}`}
+                    ${isSelected ? "ring-2 ring-controlcenter-500 ring-offset-1" : "hover:shadow-md"}`}
                   onClick={() => setSelectedDepId(dep.id)}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -386,7 +386,7 @@ export default function HealthPage() {
                       {status === "OFFLINE" ? "Currently offline" : "Monitoring active"}
                     </span>
                     <button
-                      className="text-xs text-nexus-600 hover:text-nexus-700 font-medium flex items-center gap-1 transition-colors"
+                      className="text-xs text-controlcenter-600 hover:text-controlcenter-700 font-medium flex items-center gap-1 transition-colors"
                       onClick={(e) => { e.stopPropagation(); setSelectedDepId(dep.id); }}
                     >
                       <Zap size={11} />
@@ -403,7 +403,7 @@ export default function HealthPage() {
             <div className="card p-5">
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-2">
-                  <TrendingUp size={16} className="text-nexus-600" />
+                  <TrendingUp size={16} className="text-controlcenter-600" />
                   <h2 className="text-base font-bold text-slate-900">Response Time — Last 24h</h2>
                 </div>
                 <div className="flex items-center gap-1 flex-wrap justify-end">
@@ -412,7 +412,7 @@ export default function HealthPage() {
                       key={dep.id}
                       onClick={() => setSelectedDepId(dep.id)}
                       className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors
-                        ${selectedDepId === dep.id ? "bg-nexus-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                        ${selectedDepId === dep.id ? "bg-controlcenter-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
                     >
                       {dep.organizationName.split(" ")[0]}
                     </button>
