@@ -1566,9 +1566,11 @@ function StepLicense({
 
   const activateJson = useCallback(async () => {
     if (!licenseJson.trim()) { toast.error("Paste a license JSON first."); return; }
+    if (!org?.id) { toast.error("Organisation not set — cannot activate license"); return; }
+    const moduleName = selectedModules?.[0] ?? "ZGATE";
     setActivating(true);
     try {
-      await licenseService.activateJson(licenseJson);
+      await licenseService.activateJson(org.id, moduleName, licenseJson);
       setActivated(true);
       toast.success("License activated successfully!");
     } catch {
@@ -1576,12 +1578,14 @@ function StepLicense({
     } finally {
       setActivating(false);
     }
-  }, [licenseJson]);
+  }, [licenseJson, org, selectedModules]);
 
   const handleFileDrop = useCallback(async (file: File) => {
+    if (!org?.id) { toast.error("Organisation not set — cannot activate license"); return; }
+    const moduleName = selectedModules?.[0] ?? "ZGATE";
     setActivating(true);
     try {
-      await licenseService.activateFile(file);
+      await licenseService.activateFile(org.id, moduleName, file);
       setActivated(true);
       toast.success("License file activated!");
     } catch {
@@ -1589,7 +1593,7 @@ function StepLicense({
     } finally {
       setActivating(false);
     }
-  }, []);
+  }, [org, selectedModules]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();

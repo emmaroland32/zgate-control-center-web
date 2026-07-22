@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 
 /** Decode the JWT payload (base64) without verifying — display only */
-function decodeToken(token: string): { name?: string; email?: string; role?: string } | null {
+function decodeToken(token: string): { name?: string; email?: string; role?: string; sub?: string } | null {
   try {
     const payload = token.split(".")[1];
     const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));

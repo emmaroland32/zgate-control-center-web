@@ -509,6 +509,7 @@ export interface WizardState {
   step: WizardStep;
   deploymentType: DeploymentType;
   organization: {
+    id?: string;
     name: string;
     slug: string;
     contactEmail: string;

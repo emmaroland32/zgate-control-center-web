@@ -50,6 +50,10 @@ const TIER_BADGE: Record<PartnerTier, string> = {
   SILVER: "bg-slate-100 text-slate-600",
   BRONZE: "bg-orange-100 text-orange-700",
   RESELLER: "bg-blue-100 text-blue-700",
+  ENTERPRISE: "bg-indigo-100 text-indigo-700",
+  STANDARD: "bg-emerald-100 text-emerald-700",
+  STARTER: "bg-teal-100 text-teal-700",
+  FREE: "bg-slate-100 text-slate-500",
 };
 
 const TIER_GRADIENT: Record<PartnerTier, string> = {
@@ -58,6 +62,10 @@ const TIER_GRADIENT: Record<PartnerTier, string> = {
   SILVER: "from-slate-600 to-slate-400",
   BRONZE: "from-orange-600 to-orange-400",
   RESELLER: "from-blue-600 to-blue-400",
+  ENTERPRISE: "from-indigo-600 to-indigo-400",
+  STANDARD: "from-emerald-600 to-emerald-400",
+  STARTER: "from-teal-600 to-teal-400",
+  FREE: "from-slate-500 to-slate-300",
 };
 
 const STATUS_BADGE: Record<string, string> = {
