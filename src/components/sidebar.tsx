@@ -9,7 +9,7 @@ import {
   ScrollText, Users, Plug, Settings, ChevronRight, LogOut,
   Zap, Bell, Activity, Globe, WandSparkles, Server, SlidersHorizontal,
   FileText, AlertOctagon, Database, BarChart3, GitBranch,
-  Cpu, Receipt,
+  Cpu, Receipt, Gauge,
 } from "lucide-react";
 
 /** Decode the JWT payload (base64) without verifying — display only */
@@ -66,6 +66,7 @@ const sections = [
       { href: "/database", label: "Database", icon: Database },
       { href: "/logs", label: "Log Viewer", icon: FileText },
       { href: "/health", label: "System Health", icon: Activity },
+      { href: "/sla", label: "SLA Dashboard", icon: Gauge },
       { href: "/alerts", label: "Alerts", icon: AlertOctagon },
     ],
   },
@@ -88,6 +89,7 @@ const sections = [
     label: "API Services",
     items: [
       { href: "/shared-services", label: "Service Catalog", icon: Cpu },
+      { href: "/shared-services/quotas", label: "Service Quotas", icon: Gauge },
       { href: "/billing", label: "Billing & Invoices", icon: Receipt },
     ],
   },
