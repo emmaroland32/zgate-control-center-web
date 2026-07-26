@@ -462,6 +462,7 @@ export const sharedServicesCatalog = {
 // ============================================================
 export const billingService = {
   getDashboard: (orgId: string) => api.get(`${V1}/billing/dashboard/${orgId}`).then((r) => r.data),
+  getAccounts: () => api.get(`${V1}/billing/accounts`).then((r) => r.data),
   getInvoices: () => api.get(`${V1}/billing/invoices`).then((r) => normalizeInvoiceList(unwrapPage(r.data))),
   getInvoicesByOrg: (orgId: string) =>
     api.get(`${V1}/billing/invoices/${orgId}`).then((r) => normalizeInvoiceList(unwrapPage(r.data))),

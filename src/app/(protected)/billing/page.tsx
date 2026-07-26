@@ -705,30 +705,39 @@ export default function BillingPage() {
     try {
       const invoicesPromise = billingService.getInvoices();
       const orgsPromise = organizationService.getAll();
-      const [liveInvoicesResult, realOrgsResult] = await Promise.allSettled([invoicesPromise, orgsPromise]);
+      const accountsPromise = billingService.getAccounts();
+      const [liveInvoicesResult, realOrgsResult, accountsResult] =
+        await Promise.allSettled([invoicesPromise, orgsPromise, accountsPromise]);
 
       if (realOrgsResult.status === "fulfilled") {
         setOrganizations(realOrgsResult.value);
-        setAccounts(realOrgsResult.value.map((org: Organization) => ({
-          organizationId: org.id,
-          organizationName: org.name,
-          billingEmail: `billing@${org.slug || org.id}.com`,
-          billingContact: "Primary Contact",
-          billingAddress: "Address Not Provided",
-          country: "Unknown",
+      } else {
+        console.error("Failed to fetch organizations:", (realOrgsResult as PromiseRejectedResult).reason);
+        setOrganizations([]);
+      }
+
+      // Real billing accounts (email/country from the org; cost + outstanding computed server-side).
+      // Fields without a data source show "—" rather than fabricated values.
+      if (accountsResult.status === "fulfilled" && Array.isArray(accountsResult.value)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setAccounts(accountsResult.value.map((a: any) => ({
+          organizationId: a.organizationId,
+          organizationName: a.organizationName,
+          billingEmail: a.billingEmail || "—",
+          billingContact: "—",
+          billingAddress: "—",
+          country: a.country || "—",
           currency: "USD",
           paymentTermsDays: 15,
-          taxId: "TAX-" + org.id.substring(0, 6).toUpperCase(),
+          taxId: "—",
           autoInvoice: true,
           invoiceDay: 1,
-          currentMonthEstimateUsd: 0,
-          outstandingBalanceUsd: 0,
+          currentMonthEstimateUsd: Number(a.currentMonthEstimateUsd ?? 0),
+          outstandingBalanceUsd: Number(a.outstandingBalanceUsd ?? 0),
           creditBalanceUsd: 0,
           paymentHistory: [],
         })));
       } else {
-        console.error("Failed to fetch organizations:", (realOrgsResult as PromiseRejectedResult).reason);
-        setOrganizations([]);
         setAccounts([]);
       }
 
