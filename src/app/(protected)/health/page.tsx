@@ -60,26 +60,6 @@ interface Incident {
 // ─── Generate deterministic timeline per org ──────────────────────────────────
 type TimelinePoint = { hour: string; backend: number; database: number; redis: number };
 
-function generateOrgTimeline(dep: DeploymentHealth): TimelinePoint[] {
-  const seed = dep.id.replace(/-/g, "").split("").reduce((a, c) => a + c.charCodeAt(0), 0);
-  const pr = (i: number, o: number) => Math.sin(seed + i * 17 + o * 31) * 0.5 + 0.5;
-  const isDown = dep.backendStatus === "DOWN";
-  const isDegraded = dep.backendStatus === "DEGRADED";
-  return Array.from({ length: 25 }, (_, i) => {
-    const hour = `${String(i).padStart(2, "0")}:00`;
-    if (isDown) return { hour, backend: 0, database: 0, redis: 0 };
-    const baseBe = isDegraded ? 420 : 90;
-    const baseDb = isDegraded ? 180 : 45;
-    const jitter = isDegraded ? 200 : 40;
-    return {
-      hour,
-      backend: Math.max(50, Math.round(baseBe + (pr(i, 0) - 0.5) * jitter)),
-      database: Math.max(20, Math.round(baseDb + (pr(i, 1) - 0.5) * (jitter / 2))),
-      redis: Math.max(5, Math.round(12 + (pr(i, 2) - 0.5) * 8)),
-    };
-  });
-}
-
 // ─── Derive incidents from degraded/offline orgs ─────────────────────────────
 function deriveIncidents(deployments: DeploymentHealth[]): Incident[] {
   return deployments
@@ -206,7 +186,10 @@ export default function HealthPage() {
   const globalStatus: OverallStatus = offline > 0 ? "OFFLINE" : degraded > 0 ? "DEGRADED" : "HEALTHY";
 
   const selectedDep = deployments.find((d) => d.id === selectedDepId) ?? deployments[0];
-  const chartData = selectedDep ? generateOrgTimeline(selectedDep) : [];
+  // Per-request latency time-series isn't collected from deployments; show an empty chart with a note
+  // rather than a synthetic (Math.sin) series presented as measured data. Real per-node CPU/memory/
+  // uptime is reported via telemetry and shown on each organization's detail page (Live Instances).
+  const chartData: TimelinePoint[] = [];
   const incidents = deriveIncidents(deployments).filter((i) => i.status !== "RESOLVED");
 
   return (
@@ -423,6 +406,10 @@ export default function HealthPage() {
                 <Globe size={13} className="text-slate-400" />
                 <span className="text-sm font-medium text-slate-700">{selectedDep.organizationName}</span>
                 <OverallDot status={getOverallStatus(selectedDep)} />
+              </div>
+              <div className="mb-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-500">
+                Per-request latency isn&apos;t collected from deployments yet. Real per-node CPU, memory and
+                uptime are reported via telemetry — see each organization&apos;s detail page (Live Instances).
               </div>
               <ResponsiveContainer width="100%" height={280}>
                 <AreaChart data={chartData} margin={{ top: 4, right: 12, left: -10, bottom: 0 }}>
