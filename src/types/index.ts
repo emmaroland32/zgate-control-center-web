@@ -31,6 +31,26 @@ export interface Organization {
   partnerId?: string;
   deploymentType?: DeploymentType;
   infrastructure?: InfrastructureConfig;
+  // Commercial entitlements (raw backend fields; see OrganizationController)
+  deploymentTier?: DeploymentTier;
+  maxInstances?: number;
+  entitledVersion?: string;
+  subscriptionValidUntil?: string;
+  licenseTtlDays?: number;
+}
+
+export type DeploymentTier = "SINGLE_NODE" | "HIGH_AVAILABILITY" | "MULTI_REGION";
+
+/** A live ZGATE node reported via telemetry — one row per pod/task/process. */
+export interface OrgInstance {
+  id: string;
+  organizationId: string;
+  fingerprint: string;
+  nodeId: string;
+  platform?: string;
+  appVersion?: string;
+  firstSeenAt: string;
+  lastSeenAt: string;
 }
 
 // -------------------------------------------------------

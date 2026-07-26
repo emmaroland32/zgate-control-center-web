@@ -18,6 +18,7 @@ import {
 import { organizationService, licenseService, deploymentService } from "@/services/controlcenter.service";
 import type { Organization, License, Deployment } from "@/types";
 import { formatDateTime, timeAgo } from "@/lib/utils";
+import EntitlementsSection from "@/components/entitlements-section";
 
 export default function OrganizationDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -170,6 +171,8 @@ export default function OrganizationDetailPage() {
           <div className="stat-label">Active Users</div>
         </div>
       </div>
+
+      <EntitlementsSection org={org} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="card overflow-hidden">

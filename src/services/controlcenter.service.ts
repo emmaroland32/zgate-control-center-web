@@ -181,6 +181,8 @@ export const organizationService = {
   getDashboard: () => api.get(`${V1}/organizations/dashboard`).then((r) => r.data),
   create: (data: object) => api.post(`${V1}/organizations`, data).then((r) => r.data),
   update: (id: string, data: object) => api.put(`${V1}/organizations/${id}`, data).then((r) => r.data),
+  updateEntitlements: (id: string, data: object) =>
+    api.patch(`${V1}/organizations/${id}/entitlements`, data).then((r) => r.data),
   updateStatus: (id: string, status: string) =>
     api.patch(`${V1}/organizations/${id}/status`, null, { params: { status } }).then((r) => r.data),
   /** Returns organizations adapted to ServiceHealth shape for health/dashboard pages */
@@ -267,6 +269,8 @@ export const deploymentService = {
     api
       .get(`${V1}/deployments/org/${orgId}`, { params: { page, size } })
       .then((r) => normalizeDeploymentList(r.data?.content ?? r.data)),
+  getInstances: (orgId: string) =>
+    api.get(`${V1}/deployments/org/${orgId}/instances`).then((r) => r.data),
   pushUpdate: (data: object) => api.post(`${V1}/deployments/push-update`, data).then((r) => r.data),
   updateStatus: (id: string, status: string, logs?: string) =>
     api.patch(`${V1}/deployments/${id}/status`, { status, logs }).then((r) => r.data),
