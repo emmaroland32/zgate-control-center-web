@@ -27,6 +27,7 @@ import {
   Link,
   Zap,
 } from "lucide-react";
+import { toast } from "sonner";
 import { databaseService, organizationService } from "@/services/controlcenter.service";
 import { formatDateTime, timeAgo } from "@/lib/utils";
 import type { DatabaseHealth, DatabaseBackup, FlywayMigration, SchemaInfo, Organization } from "@/types";
@@ -200,16 +201,19 @@ export default function DatabasePage() {
   const handleValidateSchema = async () => {
     setValidating(true);
     try {
-      await databaseService.validateSchema();
-    } catch { /* fallback */ }
-    finally {
-      setValidationResult(
-        schemas.map((s) => ({
-          schema: s.name,
-          ok: true,
-          issues: [],
-        }))
-      );
+      // Use the REAL validation result — never hardcode all-green on a regulated console.
+      const res = await databaseService.validateSchema();
+      const ok = res?.valid ?? (res?.errorCount ? res.errorCount === 0 : true);
+      const issues: string[] = Array.isArray(res?.warnings)
+        ? res.warnings
+        : res?.errorCount
+          ? [`${res.errorCount} error(s) detected`]
+          : [];
+      setValidationResult(schemas.map((s) => ({ schema: s.name, ok, issues })));
+    } catch {
+      setValidationResult(schemas.map((s) => ({ schema: s.name, ok: false, issues: ["Validation request failed"] })));
+      toast.error("Schema validation failed");
+    } finally {
       setLastValidated(new Date().toISOString());
       setValidating(false);
     }
@@ -228,8 +232,14 @@ export default function DatabasePage() {
     }
   };
 
-  const handleDeleteBackup = (id: string) => {
-    setBackups((prev) => prev.filter((b) => b.id !== id));
+  const handleDeleteBackup = async (id: string) => {
+    try {
+      await databaseService.deleteBackup(id);
+      setBackups((prev) => prev.filter((b) => b.id !== id));
+      toast.success("Backup deleted");
+    } catch {
+      toast.error("Could not delete backup");
+    }
   };
 
   const handleRestoreConfirm = () => {

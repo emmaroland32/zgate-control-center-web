@@ -286,8 +286,21 @@ export default function InfrastructurePage() {
           id: c.id as string || c.name as string,
           name: c.name as string || "unknown",
           image: c.image as string || "unknown",
-          status: (c.status as ContainerStatus) || "running",
-          ports: (c.ports as { host: number; container: number }[]) || [],
+          // Docker's real state enum is `state` ("running"/"exited"); `status` is the human string ("Up 5m").
+          status: ((c.state as string) || (c.status as string) || "running") as ContainerStatus,
+          // Backend serializes `ports` as a single docker string; parse "host->container" pairs (dedup).
+          ports: (() => {
+            if (Array.isArray(c.ports)) return c.ports as { host: number; container: number }[];
+            const seen = new Set<number>();
+            const out: { host: number; container: number }[] = [];
+            if (typeof c.ports === "string") {
+              for (const m of (c.ports as string).matchAll(/(\d+)->(\d+)/g)) {
+                const host = Number(m[1]);
+                if (!seen.has(host)) { seen.add(host); out.push({ host, container: Number(m[2]) }); }
+              }
+            }
+            return out;
+          })(),
           cpuPercent: (c.cpuPercent as number) || 0,
           memoryMb: (c.memoryMb as number) || 0,
           memoryLimitMb: (c.memoryLimitMb as number) || 0,
