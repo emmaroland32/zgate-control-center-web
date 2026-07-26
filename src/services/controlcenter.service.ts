@@ -340,6 +340,13 @@ export const alertService = {
   resolve: (id: string) => api.post(`${V1}/alerts/${id}/resolve`).then((r) => r.data),
 };
 
+// Telemetry — TelemetryController /api/v1/telemetry
+export const telemetryService = {
+  search: (params?: object) => api.get(`${V1}/telemetry`, { params }).then((r) => r.data),
+  licenseSummary: () => api.get(`${V1}/telemetry/license-summary`).then((r) => r.data),
+  acknowledge: (id: string) => api.post(`${V1}/telemetry/${id}/acknowledge`).then((r) => r.data),
+};
+
 // ============================================================
 // Audit — AuditController /api/v1/audit
 // ============================================================

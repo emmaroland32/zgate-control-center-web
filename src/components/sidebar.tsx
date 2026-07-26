@@ -9,7 +9,7 @@ import {
   ScrollText, Users, Plug, Settings, ChevronRight, LogOut,
   Zap, Bell, Activity, Globe, WandSparkles, Server, SlidersHorizontal,
   FileText, AlertOctagon, Database, BarChart3, GitBranch,
-  Cpu, Receipt, Gauge,
+  Cpu, Receipt, Gauge, ShieldAlert,
 } from "lucide-react";
 
 /** Decode the JWT payload (base64) without verifying — display only */
@@ -74,6 +74,7 @@ const sections = [
     label: "Licensing",
     items: [
       { href: "/licenses", label: "Licenses", icon: ShieldCheck },
+      { href: "/compliance", label: "Compliance", icon: ShieldAlert },
       { href: "/partners", label: "Partners", icon: Handshake },
     ],
   },
