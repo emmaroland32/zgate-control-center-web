@@ -50,7 +50,10 @@ function createClient(): AxiosInstance {
       return response;
     },
     (err) => {
-      if (err.response?.status === 401 && typeof window !== "undefined") {
+      // A 401 from the login call itself is a bad-credentials result — let the login page show it,
+      // don't treat it as an expired session and redirect (which would swallow the message).
+      const isLogin = (err.config?.url ?? "").includes("/auth/login");
+      if (err.response?.status === 401 && !isLogin && typeof window !== "undefined") {
         localStorage.removeItem("controlcenter_token");
         document.cookie = "controlcenter_token=; path=/; max-age=0";
         window.location.href = "/login";

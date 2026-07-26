@@ -3,7 +3,7 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { authService } from "@/services/controlcenter.service";
+import { authService, apiError } from "@/services/controlcenter.service";
 import { Zap, Lock } from "lucide-react";
 
 function LoginForm() {
@@ -28,8 +28,8 @@ function LoginForm() {
       toast.success("Welcome to ZGATE Control Center");
       const next = params.get("next") || "/";
       router.push(next);
-    } catch {
-      toast.error("Invalid credentials");
+    } catch (e) {
+      toast.error(apiError(e));
     } finally {
       setLoading(false);
     }
