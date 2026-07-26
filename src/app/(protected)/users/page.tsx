@@ -7,7 +7,7 @@ import {
   RefreshCw, AlertTriangle, CheckCircle2, X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { userService } from "@/services/controlcenter.service";
+import { userService, apiError } from "@/services/controlcenter.service";
 import { timeAgo, formatDate } from "@/lib/utils";
 import type { ControlCenterUser } from "@/types";
 
@@ -126,8 +126,8 @@ function AddUserDialog({ open, onClose, onCreated }: AddUserDialogProps) {
       });
       onCreated(created);
       handleClose();
-    } catch {
-      setError("Failed to create user. Please try again.");
+    } catch (e) {
+      setError(apiError(e));
     } finally {
       setSaving(false);
     }
@@ -322,9 +322,9 @@ export default function UsersPage() {
     try {
       const data = await userService.getAll();
       setUsers(data);
-    } catch {
+    } catch (e) {
       setUsers([]);
-      setError("Failed to load data. API unavailable.");
+      setError(apiError(e));
     } finally {
       setLoading(false);
     }
@@ -337,7 +337,7 @@ export default function UsersPage() {
     try {
       await userService.disable(u.id);
       setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, active: false } : x));
-    } catch { toast.error("Could not disable user."); }
+    } catch (e) { toast.error(apiError(e)); }
     setActionUser(null);
     setActionType(null);
     setActionLoading(false);
@@ -347,7 +347,7 @@ export default function UsersPage() {
     setActionLoading(true);
     try {
       await userService.revokeSessions(u.id);
-    } catch { toast.error("Could not revoke sessions."); }
+    } catch (e) { toast.error(apiError(e)); }
     setActionUser(null);
     setActionType(null);
     setActionLoading(false);

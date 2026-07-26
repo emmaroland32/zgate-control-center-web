@@ -8,7 +8,7 @@ import {
   CheckCircle2, XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { integrationService } from "@/services/controlcenter.service";
+import { integrationService, apiError } from "@/services/controlcenter.service";
 import { timeAgo, formatDate } from "@/lib/utils";
 import type { ControlCenterIntegration } from "@/types";
 
@@ -175,8 +175,8 @@ function ConfigureDialog({ integration, onClose, onSaved }: {
     try {
       await integrationService.updateIntegrationConfig(integration!.id, JSON.stringify(config));
       onSaved(integration!.id, config);
-    } catch {
-      setError("Failed to save configuration.");
+    } catch (e) {
+      setError(apiError(e));
     } finally {
       setSaving(false);
     }
@@ -257,8 +257,8 @@ function AddWebhookDialog({ open, onClose, onCreated }: {
       });
       setForm({ name: "", url: "", secret: "", events: [] });
       onClose();
-    } catch {
-      setError("Failed to create webhook.");
+    } catch (e) {
+      setError(apiError(e));
     } finally {
       setSaving(false);
     }
@@ -368,8 +368,8 @@ function GenerateKeyDialog({ open, onClose, onCreated }: {
       };
       setCreatedKey(rawKey);
       onCreated(newKey);
-    } catch {
-      setError("Failed to create API key.");
+    } catch (e) {
+      setError(apiError(e));
     } finally {
       setSaving(false);
     }
@@ -499,12 +499,12 @@ export default function IntegrationsPage() {
       setWebhooks(whs.status === "fulfilled" && Array.isArray(whs.value) ? whs.value : []);
       setApiKeys(keys.status === "fulfilled" && Array.isArray(keys.value) ? keys.value : []);
       setWebhookLogs(logs.status === "fulfilled" && Array.isArray(logs.value) ? logs.value : []);
-    } catch {
+    } catch (e) {
       setIntegrations([]);
       setWebhooks([]);
       setApiKeys([]);
       setWebhookLogs([]);
-      setError("Failed to load data. API unavailable.");
+      setError(apiError(e));
     } finally {
       setLoading(false);
     }
@@ -516,8 +516,8 @@ export default function IntegrationsPage() {
     try {
       await integrationService.toggleIntegration(id);
       setIntegrations((prev) => prev.map((x) => x.id === id ? { ...x, enabled: !x.enabled } : x));
-    } catch {
-      toast.error("Failed to toggle integration");
+    } catch (e) {
+      toast.error(apiError(e));
     }
   }
 
@@ -525,8 +525,8 @@ export default function IntegrationsPage() {
     try {
       await integrationService.toggleWebhook(id);
       setWebhooks((prev) => prev.map((x) => x.id === id ? { ...x, enabled: !x.enabled } : x));
-    } catch {
-      toast.error("Failed to toggle webhook");
+    } catch (e) {
+      toast.error(apiError(e));
     }
   }
 
@@ -534,8 +534,8 @@ export default function IntegrationsPage() {
     try {
       await integrationService.deleteWebhook(id);
       setWebhooks((prev) => prev.filter((x) => x.id !== id));
-    } catch {
-      toast.error("Failed to delete webhook");
+    } catch (e) {
+      toast.error(apiError(e));
     }
   }
 
@@ -543,8 +543,8 @@ export default function IntegrationsPage() {
     try {
       await integrationService.revokeApiKey(id);
       setApiKeys((prev) => prev.map((x) => x.id === id ? { ...x, revoked: true } : x));
-    } catch {
-      toast.error("Failed to revoke API key");
+    } catch (e) {
+      toast.error(apiError(e));
     }
   }
 

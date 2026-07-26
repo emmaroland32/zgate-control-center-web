@@ -8,7 +8,7 @@ import {
   X, ChevronRight, Edit, Trash2, RefreshCw, ExternalLink,
   CheckCircle2, AlertTriangle, XCircle,
 } from "lucide-react";
-import { organizationService, licenseService, deploymentService, releaseService, partnerService } from "@/services/controlcenter.service";
+import { organizationService, licenseService, deploymentService, releaseService, partnerService, apiError } from "@/services/controlcenter.service";
 import { formatDate, timeAgo } from "@/lib/utils";
 import type { Organization, DeploymentStatus, DeploymentEnv, Partner } from "@/types";
 
@@ -159,18 +159,14 @@ function AddOrgModal({ open, initialData, partners, onClose, onCreated }: AddOrg
         partnerId: form.partnerId || undefined,
       };
       
-      let saved: Organization;
-      if (initialData) {
-        saved = await organizationService.update(initialData.id, payload);
-        toast.success(`Organization "${saved.name}" updated successfully.`);
-      } else {
-        saved = await organizationService.create(payload);
-        toast.success(`Organization "${saved.name}" created successfully.`);
-      }
+      // Success toast comes from the backend message (via the axios interceptor) — not hardcoded here.
+      const saved = initialData
+        ? await organizationService.update(initialData.id, payload)
+        : await organizationService.create(payload);
       onCreated(saved);
       onClose();
-    } catch {
-      toast.error("Failed to create organization.");
+    } catch (e) {
+      toast.error(apiError(e));
     } finally {
       setSaving(false);
     }
@@ -637,9 +633,8 @@ function DetailPanel({ org, onClose, partnerName, onRefresh, onEdit, latestRelea
             try {
               toast.info("Issuing CORE license...");
               await licenseService.issue({ organizationId: org.id, moduleName: "CORE" });
-              toast.success("License issued!");
               onRefresh?.();
-            } catch { toast.error("Failed to issue license."); }
+            } catch (e) { toast.error(apiError(e)); }
           }} className="btn-secondary text-xs gap-1.5 py-1.5 px-3">
             <Shield size={12} /> Issue License
           </button>
@@ -648,9 +643,8 @@ function DetailPanel({ org, onClose, partnerName, onRefresh, onEdit, latestRelea
             try {
               toast.info("Pushing latest release...");
               await deploymentService.pushUpdate({ organizationIds: [org.id], releaseId: latestReleaseId, notifyContacts: true });
-              toast.success("Update pushed successfully!");
               onRefresh?.();
-            } catch { toast.error("Failed to push update."); }
+            } catch (e) { toast.error(apiError(e)); }
           }} className="btn-secondary text-xs gap-1.5 py-1.5 px-3">
             <RefreshCw size={12} /> Push Update
           </button>
@@ -658,9 +652,8 @@ function DetailPanel({ org, onClose, partnerName, onRefresh, onEdit, latestRelea
             try {
               const newStatus = org.status === "OFFLINE" ? "HEALTHY" : "OFFLINE";
               await organizationService.updateStatus(org.id, newStatus);
-              toast.success(`Organization visually marked as ${newStatus}`);
               onRefresh?.();
-            } catch { toast.error("Failed to disable organization."); }
+            } catch (e) { toast.error(apiError(e)); }
           }} className="btn-danger text-xs gap-1.5 py-1.5 px-3 ml-auto">
             <Trash2 size={12} /> {org.status === "OFFLINE" ? "Enable" : "Disable"}
           </button>
@@ -728,9 +721,8 @@ function RowActions({ org, onView, onEdit, onRefresh, latestReleaseId }: RowActi
              try {
                toast.info("Issuing CORE license...");
                await licenseService.issue({ organizationId: org.id, moduleName: "CORE" });
-               toast.success("License issued!");
                onRefresh();
-             } catch { toast.error("Failed to issue license."); }
+             } catch (e) { toast.error(apiError(e)); }
           }} />
           <DropdownItem icon={<RefreshCw size={12} />}     label="Push Update"      onClick={async () => {
              setOpen(false);
@@ -738,9 +730,8 @@ function RowActions({ org, onView, onEdit, onRefresh, latestReleaseId }: RowActi
              try {
                toast.info("Pushing latest release...");
                await deploymentService.pushUpdate({ organizationIds: [org.id], releaseId: latestReleaseId, notifyContacts: true });
-               toast.success("Update pushed successfully!");
                onRefresh();
-             } catch { toast.error("Failed to push update."); }
+             } catch (e) { toast.error(apiError(e)); }
           }} />
           <div className="my-1 border-t border-slate-100" />
           <DropdownItem icon={<Trash2 size={12} />}        label={org.status === "OFFLINE" ? "Enable" : "Disable"} onClick={async () => {
@@ -748,9 +739,8 @@ function RowActions({ org, onView, onEdit, onRefresh, latestReleaseId }: RowActi
              try {
                const newStatus = org.status === "OFFLINE" ? "HEALTHY" : "OFFLINE";
                await organizationService.updateStatus(org.id, newStatus);
-               toast.success(`Organization visually marked as ${newStatus}`);
                onRefresh();
-             } catch { toast.error("Failed to disable organization."); }
+             } catch (e) { toast.error(apiError(e)); }
           }} danger />
         </div>
       )}
@@ -809,7 +799,8 @@ export default function OrganizationsPage() {
         setPartners(Array.isArray(partnersData) ? partnersData : []);
         if (latestRelease?.version) LATEST_VERSION = latestRelease.version;
         if (latestRelease?.id) setLatestReleaseId(latestRelease.id);
-      } catch {
+      } catch (e) {
+        setError(apiError(e));
         setOrgs([]);
         setPartners([]);
       } finally {

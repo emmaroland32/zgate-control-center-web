@@ -5,7 +5,7 @@ import {
   Settings, Shield, Bell, Key, Package, Save, Check,
   Eye, EyeOff, RefreshCw, AlertTriangle, Globe, Lock,
 } from "lucide-react";
-import { configService } from "@/services/controlcenter.service";
+import { configService, apiError } from "@/services/controlcenter.service";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -198,8 +198,8 @@ export default function SettingsPage() {
         setLicensing((l) => ({ ...l, ...filterKeys(data, Object.keys(DEFAULT_LICENSING)) }));
         setRegistry((r) => ({ ...r, ...filterKeys(data, Object.keys(DEFAULT_REGISTRY)) }));
       }
-    } catch {
-      setError("Could not load settings — showing defaults.");
+    } catch (e) {
+      setError(apiError(e));
     } finally {
       setLoading(false);
     }
@@ -240,8 +240,8 @@ export default function SettingsPage() {
       };
       await configService.updateBatch(flat);
       setSaved(true);
-    } catch {
-      setError("Failed to save settings");
+    } catch (e) {
+      setError(apiError(e));
     }
     setSaving(false);
     setTimeout(() => setSaved(false), 3000);

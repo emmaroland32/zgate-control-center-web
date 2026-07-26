@@ -8,7 +8,7 @@ import {
   GitBranch, Clock, ArrowRight, RefreshCw, Eye,
   Shield, X,
 } from "lucide-react";
-import { releaseService } from "@/services/controlcenter.service";
+import { releaseService, apiError } from "@/services/controlcenter.service";
 import type { SoftwareRelease, ReleaseChannel } from "@/types";
 import { formatDateTime, cn, getCurrentUserEmail } from "@/lib/utils";
 
@@ -100,10 +100,9 @@ function PublishDialog({ onClose, onPublished }: PublishDialogProps) {
         isLatest: false,
       };
       const created = await releaseService.create(payload);
-      toast.success(`Release ${created.version} published.`);
       onPublished(created);
-    } catch {
-      toast.error("Failed to publish release.");
+    } catch (e) {
+      toast.error(apiError(e));
     } finally {
       setSaving(false);
     }
@@ -374,9 +373,9 @@ export default function ReleasesPage() {
     try {
       const data = await releaseService.getAll();
       setReleases(data);
-    } catch {
+    } catch (e) {
       setReleases([]);
-      setError("API unavailable.");
+      setError(apiError(e));
     } finally {
       setLoading(false);
     }
@@ -393,20 +392,18 @@ export default function ReleasesPage() {
   const handleApprove = async (id: string) => {
     try {
       await releaseService.approve(id);
-      toast.success("Release approved.");
       load();
-    } catch {
-      toast.error("Failed to approve release.");
+    } catch (e) {
+      toast.error(apiError(e));
     }
   };
 
   const handleReject = async (id: string) => {
     try {
       await releaseService.reject(id);
-      toast.success("Release rejected.");
       load();
-    } catch {
-      toast.error("Failed to reject release.");
+    } catch (e) {
+      toast.error(apiError(e));
     }
   };
 

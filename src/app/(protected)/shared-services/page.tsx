@@ -24,7 +24,7 @@ import {
   ChevronRight,
   Filter,
 } from "lucide-react";
-import { sharedServicesCatalog, organizationService } from "@/services/controlcenter.service";
+import { sharedServicesCatalog, organizationService, apiError } from "@/services/controlcenter.service";
 import { getCurrentUserEmail } from "@/lib/utils";
 import type {
   SharedService,
@@ -781,14 +781,12 @@ export default function SharedServicesPage() {
       const created = await sharedServicesCatalog.create(data);
       setServices((prev) => [created, ...prev]);
       setShowAddModal(false);
-      toast.success(`${data.name} added to the marketplace.`);
-    } catch {
-      toast.error("Failed to create service.");
+    } catch (e) {
+      toast.error(apiError(e));
     }
   }
 
   async function handleToggleSubscription(sub: OrgServiceSubscription) {
-    const action = sub.enabled ? "disable" : "enable";
     try {
       if (sub.enabled) {
         await sharedServicesCatalog.disableForOrg(sub.organizationId, sub.serviceId);
@@ -798,9 +796,8 @@ export default function SharedServicesPage() {
       setSubscriptions((prev) =>
         prev.map((s) => (s.id === sub.id ? { ...s, enabled: !s.enabled } : s))
       );
-      toast.success(`${sub.serviceName} ${action}d for ${sub.organizationName}.`);
-    } catch {
-      toast.error(`Failed to ${action} ${sub.serviceName}.`);
+    } catch (e) {
+      toast.error(apiError(e));
     }
   }
 
@@ -821,9 +818,8 @@ export default function SharedServicesPage() {
       const newSub = await sharedServicesCatalog.enableForOrg(orgId, serviceId, callLimit, getCurrentUserEmail());
       setSubscriptions((prev) => [newSub, ...prev]);
       setShowEnableModal(false);
-      toast.success(`${service.name} enabled for ${orgName}.`);
-    } catch {
-      toast.error(`Failed to enable ${service.name} for ${orgName}.`);
+    } catch (e) {
+      toast.error(apiError(e));
     }
   }
 

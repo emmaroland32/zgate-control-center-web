@@ -25,7 +25,7 @@ import {
   Landmark,
   Users,
 } from "lucide-react";
-import { licenseService, organizationService } from "@/services/controlcenter.service";
+import { licenseService, organizationService, apiError } from "@/services/controlcenter.service";
 import type { License, Organization } from "@/types";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { toast } from "sonner";
@@ -128,8 +128,8 @@ function IntegrityPanel() {
         valid: data.valid ?? 0,
         tampered: data.missing ?? data.tampered ?? 0,
       });
-    } catch {
-      toast.error("Integrity check failed — backend unavailable");
+    } catch (e) {
+      toast.error(apiError(e));
     } finally {
       setLoading(false);
     }
@@ -195,7 +195,6 @@ function UploadActivatePanel({ onActivated, organizations }: { onActivated: () =
     setLoading(true);
     try {
       await licenseService.activateFile(orgId, moduleName, file);
-      toast.success(`License file "${file.name}" activated successfully`);
       setFile(null);
       onActivated();
     } catch (err: unknown) {
@@ -352,8 +351,8 @@ function IssueLicenseTab({ organizations, onLicenseIssued }: { organizations: Or
       const { fingerprint } = await licenseService.getFingerprint(form.organizationId, moduleName);
       setField("fingerprint", fingerprint);
       toast.success("Machine fingerprint fetched");
-    } catch {
-      toast.error("Could not fetch fingerprint from backend");
+    } catch (e) {
+      toast.error(apiError(e));
     } finally {
       setFetchingFp(false);
     }
@@ -377,7 +376,6 @@ function IssueLicenseTab({ organizations, onLicenseIssued }: { organizations: Or
       });
       // bundle.payload is the signed zgate-license-v2 JSON covering all selected modules
       setGeneratedLic(bundle.payload);
-      toast.success("License bundle generated");
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? "Failed to generate license bundle");
     } finally {
@@ -643,10 +641,10 @@ export default function LicensesPage() {
       ]);
       setLicenses(lics);
       setOrganizations(orgs);
-    } catch {
+    } catch (e) {
       setLicenses([]);
       setOrganizations([]);
-      setError("Could not reach backend");
+      setError(apiError(e));
     } finally {
       setLoading(false);
     }
@@ -679,10 +677,9 @@ export default function LicensesPage() {
   const handleDeactivate = async (licenseId: string, moduleName: string) => {
     try {
       await licenseService.deactivate(licenseId);
-      toast.success(`Module ${moduleName} deactivated`);
       fetchData();
-    } catch {
-      toast.error("Deactivation failed");
+    } catch (e) {
+      toast.error(apiError(e));
     }
   };
 
@@ -706,7 +703,6 @@ export default function LicensesPage() {
             onClick={async () => {
               try {
                 const result = await licenseService.verifyAll();
-                toast.success(`Integrity check complete — ${result.valid}/${result.total} valid, ${result.missing} missing bundle`);
               } catch {
                 toast.warning("Backend unavailable for integrity check");
               }

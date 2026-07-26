@@ -24,7 +24,7 @@ import {
   Calendar,
   Banknote,
 } from "lucide-react";
-import { billingService, organizationService } from "@/services/controlcenter.service";
+import { billingService, organizationService, apiError } from "@/services/controlcenter.service";
 import type { Invoice, InvoiceLineItem, BillingAccount, Organization } from "@/types";
 
 
@@ -224,7 +224,7 @@ function InvoiceDetailModal({
                 a.download = `invoice-${invoice.invoiceNumber || invoice.id}.pdf`;
                 a.click();
                 URL.revokeObjectURL(url);
-              } catch { toast.error("Failed to download PDF"); }
+              } catch (e) { toast.error(apiError(e)); }
             }}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium border border-slate-300 rounded-lg bg-white text-slate-600 hover:bg-slate-50 transition-colors"
           >
@@ -303,11 +303,10 @@ function GenerateInvoiceModal({
     setLoading(true);
     try {
       await billingService.generate(orgId, periodStart, periodEnd);
-      toast.success("Invoice generated successfully");
       onGenerated();
       onClose();
-    } catch {
-      toast.error("Failed to generate invoice. Check billing period and try again.");
+    } catch (e) {
+      toast.error(apiError(e));
     } finally {
       setLoading(false);
     }
@@ -797,22 +796,20 @@ export default function BillingPage() {
   async function handleSend(invoiceId: string) {
     try {
       await billingService.send(invoiceId);
-      toast.success("Invoice sent successfully");
       fetchBillingData(); // Re-fetch data to update state
     } catch (error) {
       console.error("Error sending invoice:", error);
-      toast.error("Failed to send invoice");
+      toast.error(apiError(error));
     }
   }
 
   async function handleMarkPaid(invoiceId: string) {
     try {
       await billingService.markPaid(invoiceId);
-      toast.success("Invoice marked as paid");
       fetchBillingData(); // Re-fetch data to update state
     } catch (error) {
       console.error("Error marking invoice as paid:", error);
-      toast.error("Failed to mark invoice as paid");
+      toast.error(apiError(error));
     }
   }
 
@@ -999,7 +996,7 @@ export default function BillingPage() {
                     a.download = "invoices.csv";
                     a.click();
                     URL.revokeObjectURL(url);
-                  } catch { toast.error("Failed to export CSV"); }
+                  } catch (e) { toast.error(apiError(e)); }
                 }}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
               >

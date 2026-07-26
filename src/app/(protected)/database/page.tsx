@@ -28,7 +28,7 @@ import {
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
-import { databaseService, organizationService } from "@/services/controlcenter.service";
+import { databaseService, organizationService, apiError } from "@/services/controlcenter.service";
 import { formatDateTime, timeAgo } from "@/lib/utils";
 import type { DatabaseHealth, DatabaseBackup, FlywayMigration, SchemaInfo, Organization } from "@/types";
 
@@ -210,9 +210,9 @@ export default function DatabasePage() {
           ? [`${res.errorCount} error(s) detected`]
           : [];
       setValidationResult(schemas.map((s) => ({ schema: s.name, ok, issues })));
-    } catch {
+    } catch (e) {
       setValidationResult(schemas.map((s) => ({ schema: s.name, ok: false, issues: ["Validation request failed"] })));
-      toast.error("Schema validation failed");
+      toast.error(apiError(e));
     } finally {
       setLastValidated(new Date().toISOString());
       setValidating(false);
@@ -236,9 +236,8 @@ export default function DatabasePage() {
     try {
       await databaseService.deleteBackup(id);
       setBackups((prev) => prev.filter((b) => b.id !== id));
-      toast.success("Backup deleted");
-    } catch {
-      toast.error("Could not delete backup");
+    } catch (e) {
+      toast.error(apiError(e));
     }
   };
 

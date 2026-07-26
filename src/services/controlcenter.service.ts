@@ -5,6 +5,7 @@
  */
 
 import axios, { AxiosInstance } from "axios";
+import { toast } from "sonner";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8090";
 const V1 = "/api/v1";
@@ -21,7 +22,33 @@ function createClient(): AxiosInstance {
   });
 
   client.interceptors.response.use(
-    (r) => r,
+    (response) => {
+      // Every controller response is wrapped by the backend in a { code, message, data } envelope.
+      // Detect it by shape (all three keys always present — the header is only a bonus signal, since
+      // it isn't readable cross-origin unless CORS exposes it). Unwrap centrally so every caller keeps
+      // reading `r.data`, and surface the backend's success message — the UI never hardcodes messages.
+      const d = response.data;
+      const isEnvelope =
+        response.headers?.["x-api-envelope"] === "1" ||
+        (!!d && typeof d === "object" && !Array.isArray(d) &&
+          "code" in d && "message" in d && "data" in d);
+      if (isEnvelope && d && typeof d === "object") {
+        const env = d as { code?: string; message?: string; data?: unknown };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const rAny = response as any;
+        rAny.apiMessage = env.message;
+        rAny.apiCode = env.code;
+        response.data = env.data;
+        const method = (response.config.method ?? "get").toLowerCase();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const silent = (response.config as any).silent === true;
+        if (!silent && method !== "get" && typeof env.message === "string" && env.message.trim()
+            && typeof window !== "undefined") {
+          toast.success(env.message);
+        }
+      }
+      return response;
+    },
     (err) => {
       if (err.response?.status === 401 && typeof window !== "undefined") {
         localStorage.removeItem("controlcenter_token");
@@ -36,6 +63,34 @@ function createClient(): AxiosInstance {
 }
 
 const api = createClient();
+
+// ============================================================
+// Error surfacing
+// ============================================================
+/**
+ * Extract a user-facing message from a failed API call. The backend returns a uniform
+ * `{ status, code, message, fieldErrors }` envelope (see GlobalExceptionHandler), so the UI can
+ * surface the real reason (e.g. "An organization with the slug 'x' already exists") instead of a
+ * hardcoded "Failed to …". Pass a `fallback` for the case where the server is unreachable.
+ */
+export function apiError(e: unknown, fallback = "Something went wrong. Please try again."): string {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const anyE = e as any;
+  const data = anyE?.response?.data;
+  if (data) {
+    if (typeof data === "string" && data.trim()) return data;
+    if (typeof data.message === "string" && data.message.trim()) return data.message;
+    if (data.fieldErrors && typeof data.fieldErrors === "object") {
+      const parts = Object.entries(data.fieldErrors).map(([k, v]) => `${k} ${v}`);
+      if (parts.length) return parts.join("; ");
+    }
+    if (typeof data.error === "string" && data.error.trim()) return data.error;
+  }
+  if (anyE?.code === "ERR_NETWORK") return "Cannot reach the server. Check your connection and try again.";
+  if (anyE?.code === "ECONNABORTED") return "The request timed out. Please try again.";
+  if (typeof anyE?.message === "string" && anyE.message.trim()) return anyE.message;
+  return fallback;
+}
 
 // ============================================================
 // Normalization helpers — bridge backend field names to
@@ -307,25 +362,46 @@ export const authService = {
 // deploymentStatus/deploymentEnv/lastSeenAt. Map them (keeping the raw fields via spread so callers
 // that read deploymentTier/maxInstances etc. still work).
 /* eslint-disable @typescript-eslint/no-explicit-any */
+// The UI's environment vocabulary is PRODUCTION/STAGING/DEVELOPMENT; the backend enum is
+// LOCAL/STAGING/PRODUCTION. Translate on the way in AND out so the two stay in sync — posting
+// "DEVELOPMENT" raw was rejected by the backend (no such enum) and broke org creation.
+const ENV_FROM_BACKEND: Record<string, string> = {
+  LOCAL: "DEVELOPMENT", DEVELOPMENT: "DEVELOPMENT", STAGING: "STAGING", PRODUCTION: "PRODUCTION",
+};
+const ENV_TO_BACKEND: Record<string, string> = {
+  DEVELOPMENT: "LOCAL", LOCAL: "LOCAL", STAGING: "STAGING", PRODUCTION: "PRODUCTION",
+};
+
 function normalizeOrg(o: any): any {
   if (!o || typeof o !== "object") return o;
+  const rawEnv = o.environment ?? o.deploymentEnv;
   return {
     ...o,
     status: o.status ?? o.deploymentStatus,
-    environment: o.environment ?? o.deploymentEnv,
+    environment: rawEnv ? (ENV_FROM_BACKEND[rawEnv] ?? rawEnv) : rawEnv,
     lastSeen: o.lastSeen ?? o.lastSeenAt,
   };
 }
 const normalizeOrgList = (list: any): any => (Array.isArray(list) ? list.map(normalizeOrg) : list);
+
+/** Map a UI org create/update payload back to the backend enum vocabulary (DEVELOPMENT→LOCAL). */
+function denormalizeOrg(data: any): any {
+  if (!data || typeof data !== "object") return data;
+  const out: any = { ...data };
+  const env = out.deploymentEnv ?? out.environment;
+  if (env) out.deploymentEnv = ENV_TO_BACKEND[env] ?? env;
+  delete out.environment; // backend only knows deploymentEnv
+  return out;
+}
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 export const organizationService = {
   getAll: () => api.get(`${V1}/organizations`).then((r) => normalizeOrgList(r.data)),
   getById: (id: string) => api.get(`${V1}/organizations/${id}`).then((r) => normalizeOrg(r.data)),
   getDashboard: () => api.get(`${V1}/organizations/dashboard`).then((r) => r.data),
-  create: (data: object) => api.post(`${V1}/organizations`, data).then((r) => normalizeOrg(r.data)),
+  create: (data: object) => api.post(`${V1}/organizations`, denormalizeOrg(data)).then((r) => normalizeOrg(r.data)),
   update: (id: string, data: object) =>
-    api.put(`${V1}/organizations/${id}`, data).then((r) => normalizeOrg(r.data)),
+    api.put(`${V1}/organizations/${id}`, denormalizeOrg(data)).then((r) => normalizeOrg(r.data)),
   updateEntitlements: (id: string, data: object) =>
     api.patch(`${V1}/organizations/${id}/entitlements`, data).then((r) => normalizeOrg(r.data)),
   /** Rotate the M2M service key — the raw key is on `serviceApiKey` in the response (shown once). */

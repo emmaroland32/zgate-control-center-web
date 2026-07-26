@@ -25,7 +25,7 @@ import {
   List,
   Briefcase,
 } from "lucide-react";
-import { partnerService, organizationService, licenseService } from "@/services/controlcenter.service";
+import { partnerService, organizationService, licenseService, apiError } from "@/services/controlcenter.service";
 import type { Partner, PartnerTier, Organization, License } from "@/types";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -335,12 +335,11 @@ function AddPartnerDialog({
         contractExpiry: form.contractExpiresAt || undefined,
         status: "ACTIVE",
       });
-      toast.success(`Partner "${created.name}" created`);
       onCreated(created);
       setForm(EMPTY_FORM);
       onClose();
-    } catch {
-      toast.error("Failed to create partner");
+    } catch (e) {
+      toast.error(apiError(e));
     } finally {
       setSaving(false);
     }
@@ -560,11 +559,10 @@ function EditPartnerDialog({
         contractExpiry: form.contractExpiresAt || undefined,
         status: partner.status || "ACTIVE",
       });
-      toast.success(`Partner "${updated.name}" updated`);
       onUpdated(updated);
       onClose();
-    } catch {
-      toast.error("Failed to update partner");
+    } catch (e) {
+      toast.error(apiError(e));
     } finally {
       setSaving(false);
     }
@@ -1093,8 +1091,8 @@ export default function PartnersPage() {
       try {
         const data = await partnerService.getAll();
         setPartners(Array.isArray(data) ? data : []);
-      } catch {
-        setError("Failed to load partners — backend unavailable");
+      } catch (e) {
+        setError(apiError(e));
         setPartners([]);
       } finally {
         setLoading(false);

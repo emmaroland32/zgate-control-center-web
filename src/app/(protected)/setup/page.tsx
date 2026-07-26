@@ -40,7 +40,7 @@ import {
   PartyPopper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { releaseService, licenseService, databaseService } from "@/services/controlcenter.service";
+import { releaseService, licenseService, databaseService, apiError } from "@/services/controlcenter.service";
 import type { WizardState, WizardStep, DeploymentType, DeploymentEnv, SoftwareRelease } from "@/types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -1557,8 +1557,8 @@ function StepLicense({
     try {
       const data = await licenseService.getFingerprint(org.id, moduleName);
       setFingerprint(data.fingerprint);
-    } catch {
-      toast.error("Could not fetch fingerprint — ensure backend is running.");
+    } catch (e) {
+      toast.error(apiError(e));
     } finally {
       setFetchingFp(false);
     }
@@ -1572,9 +1572,8 @@ function StepLicense({
     try {
       await licenseService.activateJson(org.id, moduleName, licenseJson);
       setActivated(true);
-      toast.success("License activated successfully!");
-    } catch {
-      toast.error("Activation failed — check the license JSON.");
+    } catch (e) {
+      toast.error(apiError(e));
     } finally {
       setActivating(false);
     }
@@ -1587,9 +1586,8 @@ function StepLicense({
     try {
       await licenseService.activateFile(org.id, moduleName, file);
       setActivated(true);
-      toast.success("License file activated!");
-    } catch {
-      toast.error("Failed to activate license file.");
+    } catch (e) {
+      toast.error(apiError(e));
     } finally {
       setActivating(false);
     }
