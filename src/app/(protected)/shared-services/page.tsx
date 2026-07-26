@@ -24,7 +24,7 @@ import {
   ChevronRight,
   Filter,
 } from "lucide-react";
-import { sharedServicesCatalog } from "@/services/controlcenter.service";
+import { sharedServicesCatalog, organizationService } from "@/services/controlcenter.service";
 import { getCurrentUserEmail } from "@/lib/utils";
 import type {
   SharedService,
@@ -600,6 +600,10 @@ function EnableForOrgModal({
   const [serviceId, setServiceId] = useState("");
   const [callLimit, setCallLimit] = useState("");
   const [loading, setLoading] = useState(false);
+  const [orgs, setOrgs] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    organizationService.getAll().then((d: { id: string; name: string }[]) => setOrgs(Array.isArray(d) ? d : [])).catch(() => setOrgs([]));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -629,24 +633,21 @@ function EnableForOrgModal({
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Org ID *</label>
-              <input
-                type="text"
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Organization *</label>
+              <select
                 value={orgId}
-                onChange={(e) => setOrgId(e.target.value)}
-                placeholder="org-001"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Org Name *</label>
-              <input
-                type="text"
-                value={orgName}
-                onChange={(e) => setOrgName(e.target.value)}
-                placeholder="Apex Capital"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+                onChange={(e) => {
+                  const o = orgs.find((x) => x.id === e.target.value);
+                  setOrgId(e.target.value);
+                  setOrgName(o?.name ?? "");
+                }}
+                className="col-span-2 w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select an organization...</option>
+                {orgs.map((o) => (
+                  <option key={o.id} value={o.id}>{o.name}</option>
+                ))}
+              </select>
             </div>
           </div>
 

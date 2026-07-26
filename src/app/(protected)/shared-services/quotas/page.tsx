@@ -85,6 +85,10 @@ export default function QuotasPage() {
 
   return (
     <div className="p-6 space-y-6">
+      <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-800">
+        Preview — sample data. Per-org quota usage is not yet aggregated from live subscriptions; the rows
+        below are illustrative placeholders.
+      </div>
       <Link
         href="/shared-services"
         className="text-xs text-slate-500 hover:text-slate-800 inline-flex items-center gap-1"

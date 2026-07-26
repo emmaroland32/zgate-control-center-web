@@ -98,6 +98,10 @@ export default function SlaPage() {
 
   return (
     <div className="p-6 space-y-6">
+      <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-800">
+        Preview — this dashboard shows illustrative sample data. SLA metrics are not yet collected from
+        deployments; the figures below are placeholders, not measured values.
+      </div>
       <div className="page-header">
         <div>
           <h1 className="page-title">SLA Dashboard</h1>
