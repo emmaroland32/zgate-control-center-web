@@ -193,6 +193,21 @@ function normalizeSharedService(s: any) {
     activeSubscribers: s.activeSubscribers ?? 0,
   };
 }
+/** Map a UI shared-service create/update payload to the backend entity shape. */
+function denormalizeSharedService(data: any) {
+  const categoryMap: Record<string, string> = {
+    IDENTITY_VERIFICATION: "IDENTITY", IDENTITY: "IDENTITY",
+    AML_SANCTIONS: "SANCTIONS", SANCTIONS: "SANCTIONS", KYC: "KYC",
+    CREDIT_SCORING: "CREDIT", CREDIT: "CREDIT",
+    COMMUNICATION: "COMMUNICATION", SMS: "COMMUNICATION", EMAIL: "COMMUNICATION",
+  };
+  const out: any = { ...data };
+  if (data.category) out.category = categoryMap[data.category] ?? "IDENTITY";
+  if (out.basePricePerCall != null && out.pricePerCall == null) out.pricePerCall = out.basePricePerCall;
+  delete out.basePricePerCall; delete out.regions; delete out.totalCallsAllTime;
+  delete out.activeSubscribers; delete out.createdAt;
+  return out;
+}
 const normalizeSharedServiceList = (l: any) => (Array.isArray(l) ? l.map(normalizeSharedService) : []);
 
 function normalizeSubscription(sub: any) {
@@ -416,9 +431,10 @@ export const deploymentService = {
 export const sharedServicesCatalog = {
   getAll: () => api.get(`${V1}/shared-services`).then((r) => normalizeSharedServiceList(r.data)),
   getById: (id: string) => api.get(`${V1}/shared-services/${id}`).then((r) => normalizeSharedService(r.data)),
-  create: (data: object) => api.post(`${V1}/shared-services`, data).then((r) => normalizeSharedService(r.data)),
+  create: (data: object) =>
+    api.post(`${V1}/shared-services`, denormalizeSharedService(data)).then((r) => normalizeSharedService(r.data)),
   update: (id: string, data: object) =>
-    api.put(`${V1}/shared-services/${id}`, data).then((r) => normalizeSharedService(r.data)),
+    api.put(`${V1}/shared-services/${id}`, denormalizeSharedService(data)).then((r) => normalizeSharedService(r.data)),
 
   // Org subscriptions
   getAllSubscriptions: () =>

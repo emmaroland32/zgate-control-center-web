@@ -388,13 +388,11 @@ function AddServiceModal({
     }
     setLoading(true);
     try {
+      // The service layer maps this to the backend shape (category enum + pricePerCall field).
       await onSubmit({
         ...form,
-        basePricePerCall: parseFloat(form.basePricePerCall) * 100,
         code: form.code.toUpperCase().replace(/\s+/g, "_"),
-        totalCallsAllTime: 0,
-        activeSubscribers: 0,
-        createdAt: new Date().toISOString(),
+        basePricePerCall: parseFloat(form.basePricePerCall) * 100,
       });
     } finally {
       setLoading(false);

@@ -132,6 +132,20 @@ type Period = "7d" | "30d" | "90d" | "1y";
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("usage");
   const [period, setPeriod] = useState<Period>("30d");
+
+  async function exportReport(fmt: "pdf" | "csv") {
+    try {
+      const blob = fmt === "pdf" ? await reportService.exportPdf("summary") : await reportService.exportCsv("summary");
+      const url = URL.createObjectURL(blob as Blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `zgate-report-${period}.${fmt}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Export failed — the backend may be unavailable.");
+    }
+  }
   const [loading, setLoading] = useState(true);
 
   const [usageReport, setUsageReport] = useState<UsageReport | null>(null);
@@ -310,11 +324,11 @@ export default function ReportsPage() {
             <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           </div>
 
-          <button className="btn-secondary">
+          <button className="btn-secondary" onClick={() => exportReport("pdf")}>
             <FileText size={14} />
             Export PDF
           </button>
-          <button className="btn-secondary">
+          <button className="btn-secondary" onClick={() => exportReport("csv")}>
             <Download size={14} />
             Export CSV
           </button>

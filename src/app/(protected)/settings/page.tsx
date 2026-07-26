@@ -84,7 +84,7 @@ const DEFAULT_NOTIFICATIONS: NotificationConfig = {
 const DEFAULT_LICENSING: LicensingConfig = {
   defaultExpiryMonths: "12",
   gracePeriodDays: "7",
-  publicKeyFingerprint: "SHA256:Wg3T4mKp9bN2vXqL1hYdR8cF6sJoUzEi0AkVnPfBtD=",
+  publicKeyFingerprint: "",
 };
 
 const DEFAULT_REGISTRY: RegistryConfig = {
@@ -551,7 +551,7 @@ export default function SettingsPage() {
                     <div>
                       <label className="label">Current Key Fingerprint</label>
                       <code className="block text-xs font-mono text-slate-600 bg-white border border-slate-200 rounded-lg px-3 py-2.5 break-all">
-                        {licensing.publicKeyFingerprint}
+                        {licensing.publicKeyFingerprint || "Not available (not exposed by the backend)"}
                       </code>
                     </div>
                     <div className="flex items-start gap-2 text-xs text-slate-500 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">

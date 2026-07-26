@@ -410,8 +410,11 @@ export default function ReleasesPage() {
     }
   };
 
+  // Rollouts happen from the Deployments page (which selects orgs + calls push-update). This button
+  // previously only toasted "queued" without calling anything, so route to the real flow.
   const handleDeploy = (r: SoftwareRelease) => {
-    toast.success(`Deployment of v${r.version} queued for all organizations.`);
+    toast.message(`Roll out v${r.version} from the Deployments page.`);
+    window.location.assign("/deployments");
   };
 
   const togglePin = (channel: ReleaseChannel) => {
