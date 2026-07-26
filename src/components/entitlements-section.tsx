@@ -19,6 +19,16 @@ const TIER_RANK: Record<string, number> = { SINGLE_NODE: 0, HIGH_AVAILABILITY: 1
 // Local <input type="datetime-local"> wants "YYYY-MM-DDTHH:mm"; the backend sends full ISO.
 const toLocal = (iso?: string) => (iso ? iso.slice(0, 16) : "");
 
+function formatUptime(sec: number): string {
+  if (sec < 60) return `${sec}s`;
+  const d = Math.floor(sec / 86400);
+  const h = Math.floor((sec % 86400) / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
 export default function EntitlementsSection({ org }: { org: Organization }) {
   const orgId = org.id;
   const [tier, setTier] = useState<DeploymentTier | "">(org.deploymentTier ?? "");
@@ -286,7 +296,12 @@ export default function EntitlementsSection({ org }: { org: Organization }) {
                       >
                         {n.platform ?? "bare"}
                       </span>
-                      <span className="text-slate-400">v{n.appVersion ?? "—"}</span>
+                      <span className="text-slate-400 tabular-nums">
+                        {n.memUsedMb != null ? `${n.memUsedMb}/${n.memMaxMb ?? "?"}MB` : "—"}
+                      </span>
+                      <span className="text-slate-400 tabular-nums">
+                        {n.uptimeSeconds != null ? formatUptime(n.uptimeSeconds) : "—"}
+                      </span>
                       <span className="text-slate-400">{timeAgo(n.lastSeenAt)}</span>
                     </div>
                   ))}

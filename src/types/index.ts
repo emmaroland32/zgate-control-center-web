@@ -53,6 +53,9 @@ export interface OrgInstance {
   appVersion?: string;
   firstSeenAt: string;
   lastSeenAt: string;
+  memUsedMb?: number;
+  memMaxMb?: number;
+  uptimeSeconds?: number;
 }
 
 // -------------------------------------------------------
