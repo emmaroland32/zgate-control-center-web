@@ -297,6 +297,9 @@ export default function EntitlementsSection({ org }: { org: Organization }) {
                         {n.platform ?? "bare"}
                       </span>
                       <span className="text-slate-400 tabular-nums">
+                        {n.cpuPct != null ? `${n.cpuPct}% cpu` : "—"}
+                      </span>
+                      <span className="text-slate-400 tabular-nums">
                         {n.memUsedMb != null ? `${n.memUsedMb}/${n.memMaxMb ?? "?"}MB` : "—"}
                       </span>
                       <span className="text-slate-400 tabular-nums">

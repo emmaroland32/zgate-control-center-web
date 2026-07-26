@@ -56,6 +56,7 @@ export interface OrgInstance {
   memUsedMb?: number;
   memMaxMb?: number;
   uptimeSeconds?: number;
+  cpuPct?: number;
 }
 
 // -------------------------------------------------------
