@@ -93,12 +93,6 @@ function responseColor(ms: number): string {
   return "text-red-600";
 }
 
-function uptimeBarColor(pct: number): string {
-  if (pct >= 99.5) return "bg-emerald-500";
-  if (pct >= 99) return "bg-amber-500";
-  return "bg-red-500";
-}
-
 function ServicePill({ status, label, Icon }: { status: ServiceStatus; label: string; Icon: React.ElementType }) {
   const colors: Record<ServiceStatus, string> = {
     UP: "bg-emerald-100 text-emerald-700",
@@ -353,15 +347,13 @@ export default function HealthPage() {
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-1 text-[10px] text-slate-400 uppercase tracking-wide">
-                        <TrendingUp size={10} /> Uptime
+                        <TrendingUp size={10} /> Status
                       </div>
-                      <span className={`text-xs font-semibold ${dep.uptime >= 99.5 ? "text-emerald-600" : dep.uptime >= 99 ? "text-amber-600" : "text-red-600"}`}>
-                        {dep.uptime.toFixed(2)}%
+                      <span className={`text-xs font-semibold ${dep.backendStatus === "UP" ? "text-emerald-600" : dep.backendStatus === "DEGRADED" ? "text-amber-600" : "text-red-600"}`}>
+                        {dep.backendStatus === "UP" ? "Operational" : dep.backendStatus === "DEGRADED" ? "Degraded" : "Offline"}
                       </span>
                     </div>
-                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full transition-all ${uptimeBarColor(dep.uptime)}`} style={{ width: `${dep.uptime}%` }} />
-                    </div>
+                    <div className="text-[10px] text-slate-400">Last seen {timeAgo(dep.lastChecked)}</div>
                   </div>
 
                   <div className="pt-1 border-t border-slate-100 flex items-center justify-between">
