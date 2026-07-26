@@ -249,7 +249,8 @@ function AddWebhookDialog({ open, onClose, onCreated }: {
     setSaving(true);
     setError(null);
     try {
-      const created = await integrationService.createWebhook(form);
+      // Backend CreateWebhookRequest.events is a JSON-array String.
+      const created = await integrationService.createWebhook({ ...form, events: JSON.stringify(form.events) });
       onCreated({
         id: created.id, name: created.name ?? form.name, url: created.url ?? form.url,
         events: created.events ?? form.events, enabled: true, successRate: 100, secret: form.secret,
@@ -351,7 +352,10 @@ function GenerateKeyDialog({ open, onClose, onCreated }: {
     setSaving(true);
     setError(null);
     try {
-      const result = await integrationService.createApiKey(form);
+      // Backend CreateApiKeyRequest expects `expiresAt`, not `expiry`.
+      const result = await integrationService.createApiKey({
+        name: form.name, scopes: form.scopes, expiresAt: form.expiry || undefined,
+      });
       const rawKey = result.rawKey;
       const apiKey = result.apiKey;
       const last4 = rawKey.slice(-4);

@@ -323,7 +323,7 @@ function AddPartnerDialog({
     setSaving(true);
     try {
       const created = await partnerService.create({
-        name: form.name,
+        companyName: form.name,
         tier: form.tier,
         contactName: form.contactName,
         contactEmail: form.contactEmail,
@@ -331,12 +331,9 @@ function AddPartnerDialog({
         country: form.country,
         region: form.region,
         website: form.website || undefined,
-        revenueShare: parseFloat(form.revenueShare) || 10,
-        contractExpiresAt: form.contractExpiresAt || undefined,
-        status: "PENDING",
-        deploymentCount: 0,
-        activeDeployments: 0,
-        joinedAt: new Date().toISOString(),
+        revenueSharePercent: parseFloat(form.revenueShare) || 10,
+        contractExpiry: form.contractExpiresAt || undefined,
+        status: "ACTIVE",
       });
       toast.success(`Partner "${created.name}" created`);
       onCreated(created);
@@ -551,7 +548,7 @@ function EditPartnerDialog({
     setSaving(true);
     try {
       const updated = await partnerService.update(partner.id, {
-        name: form.name,
+        companyName: form.name,
         tier: form.tier,
         contactName: form.contactName,
         contactEmail: form.contactEmail,
@@ -559,8 +556,9 @@ function EditPartnerDialog({
         country: form.country,
         region: form.region,
         website: form.website || undefined,
-        revenueShare: parseFloat(form.revenueShare) || 10,
-        contractExpiresAt: form.contractExpiresAt || undefined,
+        revenueSharePercent: parseFloat(form.revenueShare) || 10,
+        contractExpiry: form.contractExpiresAt || undefined,
+        status: partner.status || "ACTIVE",
       });
       toast.success(`Partner "${updated.name}" updated`);
       onUpdated(updated);

@@ -164,6 +164,119 @@ function orgToServiceHealth(org: any) {
   };
 }
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+/** Spring returns Page<T> ({content,totalElements,…}) from paginated endpoints; the pages expect an
+ *  array. Unwrap to .content when present, else pass through. */
+function unwrapPage(d: any): any {
+  return d && !Array.isArray(d) && Array.isArray(d.content) ? d.content : d;
+}
+
+/** Parse a JSON-array string (or comma list) into an array; pass arrays through. */
+function parseArr(v: any): any[] {
+  if (Array.isArray(v)) return v;
+  if (typeof v === "string" && v.trim()) {
+    try { const p = JSON.parse(v); return Array.isArray(p) ? p : []; }
+    catch { return v.split(",").map((s) => s.trim()).filter(Boolean); }
+  }
+  return [];
+}
+
+function normalizeSharedService(s: any) {
+  if (!s) return s;
+  return {
+    ...s,
+    basePricePerCall: s.basePricePerCall ?? s.pricePerCall ?? 0,
+    status: s.status ?? (s.enabled === false ? "DISABLED" : "ACTIVE"),
+    regions: parseArr(s.regions),
+    totalCallsAllTime: s.totalCallsAllTime ?? 0,
+    activeSubscribers: s.activeSubscribers ?? 0,
+  };
+}
+const normalizeSharedServiceList = (l: any) => (Array.isArray(l) ? l.map(normalizeSharedService) : []);
+
+function normalizeSubscription(sub: any) {
+  if (!sub) return sub;
+  return {
+    ...sub,
+    monthlyCallLimit: sub.monthlyCallLimit ?? sub.callLimit ?? 0,
+    currentMonthCalls: sub.currentMonthCalls ?? 0,
+    serviceName: sub.serviceName ?? sub.serviceCode ?? sub.serviceId ?? "",
+    serviceCode: sub.serviceCode ?? "",
+    organizationName: sub.organizationName ?? sub.organizationId ?? "",
+  };
+}
+const normalizeSubscriptionList = (l: any) => (Array.isArray(l) ? l.map(normalizeSubscription) : []);
+
+function normalizeInvoice(inv: any) {
+  if (!inv) return inv;
+  return {
+    ...inv,
+    totalUsd: inv.totalUsd ?? inv.totalAmount ?? 0,
+    subtotalUsd: inv.subtotalUsd ?? inv.subtotal ?? 0,
+    taxAmountUsd: inv.taxAmountUsd ?? inv.taxAmount ?? 0,
+    taxPercent: inv.taxPercent ?? (inv.taxRate != null ? Number(inv.taxRate) * 100 : 0),
+    issuedAt: inv.issuedAt ?? inv.createdAt ?? null,
+    dueAt: inv.dueAt ?? inv.dueDate ?? null,
+    organizationName: inv.organizationName ?? inv.organizationId ?? "",
+    organizationEmail: inv.organizationEmail ?? "",
+    lineItems: Array.isArray(inv.lineItems) ? inv.lineItems : [],
+  };
+}
+const normalizeInvoiceList = (l: any) => (Array.isArray(l) ? l.map(normalizeInvoice) : []);
+
+function normalizeAuditLog(e: any) {
+  if (!e) return e;
+  return { ...e, timestamp: e.timestamp ?? e.createdAt ?? null, organizationName: e.organizationName ?? e.organizationId ?? "" };
+}
+
+function normalizeTelemetryEvent(e: any) {
+  if (!e) return e;
+  return { ...e, service: e.service ?? e.category ?? "", timestamp: e.timestamp ?? e.occurredAt ?? null };
+}
+
+function normalizeAlert(a: any) {
+  if (!a) return a;
+  return {
+    ...a,
+    ruleName: a.ruleName ?? a.title ?? "",
+    value: a.value ?? a.metricValue ?? null,
+    organizationName: a.organizationName ?? a.organizationId ?? "",
+  };
+}
+
+function normalizeWebhook(w: any) {
+  if (!w) return w;
+  return { ...w, events: parseArr(w.events) };
+}
+function normalizeApiKey(k: any) {
+  if (!k) return k;
+  return {
+    ...k,
+    scopes: parseArr(k.scopes),
+    keyMasked: k.keyMasked ?? (k.keyPrefix ? `${k.keyPrefix}…` : ""),
+    lastUsed: k.lastUsed ?? k.lastUsedAt ?? null,
+  };
+}
+function normalizeIntegration(i: any) {
+  if (!i) return i;
+  let config = i.config;
+  if (!config && typeof i.configJson === "string") {
+    try { config = JSON.parse(i.configJson); } catch { config = {}; }
+  }
+  return { ...i, type: i.type ?? (i.code ? String(i.code).toUpperCase() : ""), config: config ?? {} };
+}
+
+function normalizeConfig(c: any) {
+  if (!c) return c;
+  return { ...c, isSecret: c.isSecret ?? c.secret ?? false };
+}
+function normalizeUser(u: any) {
+  if (!u) return u;
+  return { ...u, lastLogin: u.lastLogin ?? u.lastLoginAt ?? null };
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
 // ============================================================
 // Auth — AuthController /api/v1/auth
 // ============================================================
@@ -301,16 +414,17 @@ export const deploymentService = {
 // Shared Services — SharedServiceController /api/v1/shared-services
 // ============================================================
 export const sharedServicesCatalog = {
-  getAll: () => api.get(`${V1}/shared-services`).then((r) => r.data),
-  getById: (id: string) => api.get(`${V1}/shared-services/${id}`).then((r) => r.data),
-  create: (data: object) => api.post(`${V1}/shared-services`, data).then((r) => r.data),
-  update: (id: string, data: object) => api.put(`${V1}/shared-services/${id}`, data).then((r) => r.data),
+  getAll: () => api.get(`${V1}/shared-services`).then((r) => normalizeSharedServiceList(r.data)),
+  getById: (id: string) => api.get(`${V1}/shared-services/${id}`).then((r) => normalizeSharedService(r.data)),
+  create: (data: object) => api.post(`${V1}/shared-services`, data).then((r) => normalizeSharedService(r.data)),
+  update: (id: string, data: object) =>
+    api.put(`${V1}/shared-services/${id}`, data).then((r) => normalizeSharedService(r.data)),
 
   // Org subscriptions
   getAllSubscriptions: () =>
-    api.get(`${V1}/shared-services/subscriptions`).then((r) => r.data),
+    api.get(`${V1}/shared-services/subscriptions`).then((r) => normalizeSubscriptionList(unwrapPage(r.data))),
   getSubscriptions: (orgId: string) =>
-    api.get(`${V1}/shared-services/subscriptions/${orgId}`).then((r) => r.data),
+    api.get(`${V1}/shared-services/subscriptions/${orgId}`).then((r) => normalizeSubscriptionList(unwrapPage(r.data))),
   enableForOrg: (orgId: string, serviceId: string, callLimit?: number, enabledBy?: string) =>
     api.post(`${V1}/shared-services/subscriptions/${orgId}/enable`, { serviceId, callLimit, enabledBy }).then((r) => r.data),
   disableForOrg: (orgId: string, serviceId: string) =>
@@ -332,8 +446,11 @@ export const sharedServicesCatalog = {
 // ============================================================
 export const billingService = {
   getDashboard: (orgId: string) => api.get(`${V1}/billing/dashboard/${orgId}`).then((r) => r.data),
-  getInvoices: () => api.get(`${V1}/billing/invoices`).then((r) => r.data),
-  getInvoicesByOrg: (orgId: string) => api.get(`${V1}/billing/invoices/${orgId}`).then((r) => r.data),
+  getInvoices: () => api.get(`${V1}/billing/invoices`).then((r) => normalizeInvoiceList(unwrapPage(r.data))),
+  getInvoicesByOrg: (orgId: string) =>
+    api.get(`${V1}/billing/invoices/${orgId}`).then((r) => normalizeInvoiceList(unwrapPage(r.data))),
+  getLineItems: (invoiceId: string) =>
+    api.get(`${V1}/billing/invoices/${invoiceId}/line-items`).then((r) => r.data),
   generate: (orgId: string, periodStart: string, periodEnd: string) =>
     api.post(`${V1}/billing/invoices/generate`, { organizationId: orgId, periodStart, periodEnd }).then((r) => r.data),
   send: (invoiceId: string) => api.post(`${V1}/billing/invoices/${invoiceId}/send`).then((r) => r.data),
@@ -348,21 +465,31 @@ export const billingService = {
 // Alerts — AlertController /api/v1/alerts
 // ============================================================
 export const alertService = {
-  getRules: () => api.get(`${V1}/alerts/rules`).then((r) => r.data),
+  getRules: () =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    api.get(`${V1}/alerts/rules`).then((r): any =>
+      (Array.isArray(r.data) ? r.data : []).map((rule: Record<string, unknown>) => ({
+        ...rule,
+        channels: parseArr(rule.channels),
+        condition: rule.condition ?? { metric: rule.metric, operator: rule.operator, threshold: rule.threshold },
+      })),
+    ),
   createRule: (data: object) => api.post(`${V1}/alerts/rules`, data).then((r) => r.data),
   updateRule: (id: string, data: object) => api.put(`${V1}/alerts/rules/${id}`, data).then((r) => r.data),
   deleteRule: (id: string) => api.delete(`${V1}/alerts/rules/${id}`).then((r) => r.data),
-  toggleRule: (id: string) => api.put(`${V1}/alerts/rules/${id}`, {}).then((r) => r.data),
-  getActive: () => api.get(`${V1}/alerts/active`).then((r) => r.data),
-  getAll: () => api.get(`${V1}/alerts`).then((r) => r.data),
-  getHistory: (params?: object) => api.get(`${V1}/alerts`, { params }).then((r) => r.data),
+  toggleRule: (id: string) => api.patch(`${V1}/alerts/rules/${id}/toggle`).then((r) => r.data),
+  getActive: () => api.get(`${V1}/alerts/active`).then((r) => (unwrapPage(r.data) as unknown[]).map(normalizeAlert)),
+  getAll: () => api.get(`${V1}/alerts`).then((r) => (unwrapPage(r.data) as unknown[]).map(normalizeAlert)),
+  getHistory: (params?: object) =>
+    api.get(`${V1}/alerts`, { params }).then((r) => (unwrapPage(r.data) as unknown[]).map(normalizeAlert)),
   acknowledge: (id: string) => api.post(`${V1}/alerts/${id}/acknowledge`).then((r) => r.data),
   resolve: (id: string) => api.post(`${V1}/alerts/${id}/resolve`).then((r) => r.data),
 };
 
 // Telemetry — TelemetryController /api/v1/telemetry
 export const telemetryService = {
-  search: (params?: object) => api.get(`${V1}/telemetry`, { params }).then((r) => r.data),
+  search: (params?: object) =>
+    api.get(`${V1}/telemetry`, { params }).then((r) => (unwrapPage(r.data) as unknown[]).map(normalizeTelemetryEvent)),
   licenseSummary: () => api.get(`${V1}/telemetry/license-summary`).then((r) => r.data),
   acknowledge: (id: string) => api.post(`${V1}/telemetry/${id}/acknowledge`).then((r) => r.data),
 };
@@ -375,18 +502,20 @@ export const auditService = {
     orgId?: string; action?: string;
     from?: string; to?: string;
     page?: number; size?: number;
-  }) => api.get(`${V1}/audit`, { params }).then((r) => r.data),
+  }) => api.get(`${V1}/audit`, { params }).then((r) => (unwrapPage(r.data) as unknown[]).map(normalizeAuditLog)),
   // Alias used by audit/page.tsx
-  getLogs: (params?: object) => api.get(`${V1}/audit`, { params }).then((r) => r.data),
-  getSignInAttempts: () => api.get(`${V1}/audit`, { params: { action: "LOGIN" } }).then((r) => r.data),
+  getLogs: (params?: object) =>
+    api.get(`${V1}/audit`, { params }).then((r) => (unwrapPage(r.data) as unknown[]).map(normalizeAuditLog)),
+  getSignInAttempts: () =>
+    api.get(`${V1}/audit`, { params: { action: "LOGIN" } }).then((r) => (unwrapPage(r.data) as unknown[]).map(normalizeAuditLog)),
 };
 
 // ============================================================
 // Users — UserController /api/v1/users
 // ============================================================
 export const userService = {
-  getAll: () => api.get(`${V1}/users`).then((r) => r.data),
-  getById: (id: string) => api.get(`${V1}/users/${id}`).then((r) => r.data),
+  getAll: () => api.get(`${V1}/users`).then((r) => (unwrapPage(r.data) as unknown[]).map(normalizeUser)),
+  getById: (id: string) => api.get(`${V1}/users/${id}`).then((r) => normalizeUser(r.data)),
   create: (data: object) => api.post(`${V1}/users`, data).then((r) => r.data),
   update: (id: string, data: object) => api.put(`${V1}/users/${id}`, data).then((r) => r.data),
   disable: (id: string) => api.post(`${V1}/users/${id}/disable`).then((r) => r.data),
@@ -465,7 +594,7 @@ const notImplemented = (name: string) => (..._args: any[]): Promise<any> =>
 // ============================================================
 export const configService = {
   getAll: () =>
-    api.get(`${V1}/config`).then((r) => r.data),
+    api.get(`${V1}/config`).then((r) => (Array.isArray(r.data) ? r.data.map(normalizeConfig) : [])),
   /** Returns config as a flat key→value map (used by settings page). */
   getMap: () =>
     api.get(`${V1}/config`).then((r) => {
@@ -478,7 +607,7 @@ export const configService = {
   getByKey: (key: string) =>
     api.get(`${V1}/config/${key}`).then((r) => r.data),
   getByCategory: (category: string) =>
-    api.get(`${V1}/config/category/${category}`).then((r) => r.data),
+    api.get(`${V1}/config/category/${category}`).then((r) => (Array.isArray(r.data) ? r.data.map(normalizeConfig) : [])),
   updateKey: (key: string, value: string) =>
     api.put(`${V1}/config/${key}`, { value }).then((r) => r.data),
   /** Accepts a flat Record<string,string> and transforms to List<{key,value}> for the backend. */
@@ -515,11 +644,23 @@ export const reportService = {
   // Frontend compat aliases
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getUsage: (_period?: any) =>
-    api.get(`${V1}/reports/summary`).then((r) => r.data),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    api.get(`${V1}/reports/summary`).then((r): any => {
+      const s = r.data ?? {};
+      return {
+        ...s,
+        moduleUsage: Array.isArray(s.moduleUsage) ? s.moduleUsage : [],
+        deploymentsByEnv: Array.isArray(s.deploymentsByEnv) ? s.deploymentsByEnv : [],
+        totalUsers: s.totalUsers ?? 0,
+        totalApiCalls: s.totalApiCalls ?? 0,
+      };
+    }),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getLicense: () =>
-    api.get(`${V1}/reports/modules`).then((r) => r.data),
+    api.get(`${V1}/reports/modules`).then((r): any => ({ byModule: Array.isArray(r.data) ? r.data : [] })),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getDeployments: () =>
-    api.get(`${V1}/reports/deployments`).then((r) => r.data),
+    api.get(`${V1}/reports/deployments`).then((r): any => ({ timeline: Array.isArray(r.data) ? r.data : [] })),
   exportPdf: (type = "summary") =>
     api.get(`${V1}/reports/export/pdf`, { params: { type }, responseType: "blob" }).then((r) => r.data),
   exportCsv: (type = "summary") =>
@@ -532,9 +673,9 @@ export const reportService = {
 export const integrationService = {
   // Webhooks
   getWebhooks: () =>
-    api.get(`${V1}/integrations/webhooks`).then((r) => r.data),
+    api.get(`${V1}/integrations/webhooks`).then((r) => (Array.isArray(r.data) ? r.data.map(normalizeWebhook) : [])),
   createWebhook: (data: object) =>
-    api.post(`${V1}/integrations/webhooks`, data).then((r) => r.data),
+    api.post(`${V1}/integrations/webhooks`, data).then((r) => normalizeWebhook(r.data)),
   updateWebhook: (id: string, data: object) =>
     api.put(`${V1}/integrations/webhooks/${id}`, data).then((r) => r.data),
   toggleWebhook: (id: string) =>
@@ -547,14 +688,14 @@ export const integrationService = {
       : api.get(`${V1}/integrations/webhooks/logs`).then((r) => r.data),
   // API Keys
   getApiKeys: () =>
-    api.get(`${V1}/integrations/api-keys`).then((r) => r.data),
+    api.get(`${V1}/integrations/api-keys`).then((r) => (Array.isArray(r.data) ? r.data.map(normalizeApiKey) : [])),
   createApiKey: (data: object) =>
-    api.post(`${V1}/integrations/api-keys`, data).then((r) => r.data),
+    api.post(`${V1}/integrations/api-keys`, data).then((r) => normalizeApiKey(r.data)),
   revokeApiKey: (id: string) =>
     api.delete(`${V1}/integrations/api-keys/${id}/revoke`).then((r) => r.data),
   // 3rd-party integration catalog
   getIntegrations: () =>
-    api.get(`${V1}/integrations`).then((r) => r.data),
+    api.get(`${V1}/integrations`).then((r) => (Array.isArray(r.data) ? r.data.map(normalizeIntegration) : [])),
   toggleIntegration: (id: string) =>
     api.post(`${V1}/integrations/${id}/toggle`).then((r) => r.data),
   updateIntegrationConfig: (id: string, config: string) =>

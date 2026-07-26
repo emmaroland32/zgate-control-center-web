@@ -84,19 +84,20 @@ function PublishDialog({ onClose, onPublished }: PublishDialogProps) {
     }
     setSaving(true);
     try {
-      const payload: Partial<SoftwareRelease> = {
+      // Backend CreateReleaseRequest expects hasBreakingChanges + migrations (JSON string).
+      const payload = {
         version: form.version,
         channel: form.channel,
         dockerTag: form.dockerTag,
         dockerRegistry: form.dockerRegistry,
         releaseNotes: form.releaseNotes,
-        breakingChanges: form.breakingChanges,
-        requiredMigrations: form.requiredMigrations.split("\n").map((s) => s.trim()).filter(Boolean),
-        modules: form.modules,
+        hasBreakingChanges: form.breakingChanges,
+        migrations: JSON.stringify(
+          form.requiredMigrations.split("\n").map((s) => s.trim()).filter(Boolean),
+        ),
         publishedAt: new Date().toISOString(),
         publishedBy: getCurrentUserEmail(),
         isLatest: false,
-        isLts: form.channel === "LTS",
       };
       const created = await releaseService.create(payload);
       toast.success(`Release ${created.version} published.`);

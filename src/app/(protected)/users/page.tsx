@@ -6,6 +6,7 @@ import {
   Users, Plus, Edit, Lock, UserX, Shield, Eye, Mail, Clock,
   RefreshCw, AlertTriangle, CheckCircle2, X,
 } from "lucide-react";
+import { toast } from "sonner";
 import { userService } from "@/services/controlcenter.service";
 import { timeAgo, formatDate } from "@/lib/utils";
 import type { ControlCenterUser } from "@/types";
@@ -240,7 +241,7 @@ function EditUserDialog({ user, onClose, onSaved }: EditUserDialogProps) {
     if (!user) return;
     setSaving(true);
     try {
-      const updated = await userService.update(user.id, { name: form.name, role: form.role });
+      const updated = await userService.update(user.id, { name: form.name, email: user.email, role: form.role });
       onSaved(updated);
     } catch {
       onSaved({ ...user, name: form.name, role: form.role });
@@ -334,9 +335,9 @@ export default function UsersPage() {
   async function handleDisable(u: ControlCenterUser) {
     setActionLoading(true);
     try {
-      await userService.disable(u.email);
-    } catch { /* ok */ }
-    setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, active: false } : x));
+      await userService.disable(u.id);
+      setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, active: false } : x));
+    } catch { toast.error("Could not disable user."); }
     setActionUser(null);
     setActionType(null);
     setActionLoading(false);
@@ -345,8 +346,8 @@ export default function UsersPage() {
   async function handleRevoke(u: ControlCenterUser) {
     setActionLoading(true);
     try {
-      await userService.revokeSessions(u.email);
-    } catch { /* ok */ }
+      await userService.revokeSessions(u.id);
+    } catch { toast.error("Could not revoke sessions."); }
     setActionUser(null);
     setActionType(null);
     setActionLoading(false);
