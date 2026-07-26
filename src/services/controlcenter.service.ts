@@ -175,14 +175,34 @@ export const authService = {
 // ============================================================
 // Organizations — OrganizationController /api/v1/organizations
 // ============================================================
+// The pages use friendly field names (status/environment/lastSeen); the backend entity serializes
+// deploymentStatus/deploymentEnv/lastSeenAt. Map them (keeping the raw fields via spread so callers
+// that read deploymentTier/maxInstances etc. still work).
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function normalizeOrg(o: any): any {
+  if (!o || typeof o !== "object") return o;
+  return {
+    ...o,
+    status: o.status ?? o.deploymentStatus,
+    environment: o.environment ?? o.deploymentEnv,
+    lastSeen: o.lastSeen ?? o.lastSeenAt,
+  };
+}
+const normalizeOrgList = (list: any): any => (Array.isArray(list) ? list.map(normalizeOrg) : list);
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
 export const organizationService = {
-  getAll: () => api.get(`${V1}/organizations`).then((r) => r.data),
-  getById: (id: string) => api.get(`${V1}/organizations/${id}`).then((r) => r.data),
+  getAll: () => api.get(`${V1}/organizations`).then((r) => normalizeOrgList(r.data)),
+  getById: (id: string) => api.get(`${V1}/organizations/${id}`).then((r) => normalizeOrg(r.data)),
   getDashboard: () => api.get(`${V1}/organizations/dashboard`).then((r) => r.data),
-  create: (data: object) => api.post(`${V1}/organizations`, data).then((r) => r.data),
-  update: (id: string, data: object) => api.put(`${V1}/organizations/${id}`, data).then((r) => r.data),
+  create: (data: object) => api.post(`${V1}/organizations`, data).then((r) => normalizeOrg(r.data)),
+  update: (id: string, data: object) =>
+    api.put(`${V1}/organizations/${id}`, data).then((r) => normalizeOrg(r.data)),
   updateEntitlements: (id: string, data: object) =>
-    api.patch(`${V1}/organizations/${id}/entitlements`, data).then((r) => r.data),
+    api.patch(`${V1}/organizations/${id}/entitlements`, data).then((r) => normalizeOrg(r.data)),
+  /** Rotate the M2M service key — the raw key is on `serviceApiKey` in the response (shown once). */
+  regenerateKey: (id: string) =>
+    api.post(`${V1}/organizations/${id}/regenerate-key`).then((r) => normalizeOrg(r.data)),
   updateStatus: (id: string, status: string) =>
     api.patch(`${V1}/organizations/${id}/status`, null, { params: { status } }).then((r) => r.data),
   /** Returns organizations adapted to ServiceHealth shape for health/dashboard pages */

@@ -381,14 +381,20 @@ function DetailPanel({ org, onClose, partnerName, onRefresh, onEdit, latestRelea
 
   const isOutdated = LATEST_VERSION ? org.deployedVersion !== LATEST_VERSION : false;
 
-  // Health data derived from org status
+  // Health derived from real signals: the reported deployment status + heartbeat freshness. Uptime %
+  // and response time aren't collected yet, so we show "—" rather than fabricate them.
+  const seenRecently = org.lastSeen
+    ? Date.now() - new Date(org.lastSeen).getTime() < 10 * 60 * 1000
+    : false;
   const health = {
-    backendStatus: org.status === "OFFLINE" ? "DOWN" : org.status === "DEGRADED" ? "DEGRADED" : "UP",
-    databaseStatus: org.status === "OFFLINE" ? "DOWN" : "UP",
-    redisStatus: org.status === "OFFLINE" ? "DOWN" : org.status === "DEGRADED" ? "DEGRADED" : "UP",
-    uptimeHours: org.status === "OFFLINE" ? 0 : 99.7,
-    responseTimeMs: org.status === "OFFLINE" ? 0 : org.status === "DEGRADED" ? 820 : 142,
-    lastChecked: org.lastSeen || new Date().toISOString(),
+    backendStatus:
+      org.status === "OFFLINE" ? "DOWN" : org.status === "DEGRADED" ? "DEGRADED" : seenRecently ? "UP" : "UNKNOWN",
+    databaseStatus: org.status === "OFFLINE" ? "DOWN" : seenRecently ? "UP" : "UNKNOWN",
+    redisStatus:
+      org.status === "OFFLINE" ? "DOWN" : org.status === "DEGRADED" ? "DEGRADED" : seenRecently ? "UP" : "UNKNOWN",
+    uptimeHours: null as number | null, // not measured — requires real metrics from the instance
+    responseTimeMs: null as number | null,
+    lastChecked: org.lastSeen ?? null,
   } as const;
 
   const tabs: { id: DetailTab; label: string }[] = [
@@ -443,7 +449,7 @@ function DetailPanel({ org, onClose, partnerName, onRefresh, onEdit, latestRelea
             { label: "Active Users",   value: org.activeUsers,               icon: <Users size={13} className="text-controlcenter-500" /> },
             { label: "Modules",        value: (org.licensedModules || []).length,     icon: <Shield size={13} className="text-emerald-500" /> },
             { label: "Version",        value: org.deployedVersion,            icon: <Globe size={13} className="text-slate-400" /> },
-            { label: "Uptime",         value: org.status === "OFFLINE" ? "—" : "99.7%", icon: <Clock size={13} className="text-amber-500" /> },
+            { label: "Last seen",      value: org.lastSeen ? timeAgo(org.lastSeen) : "Never", icon: <Clock size={13} className="text-amber-500" /> },
           ].map(({ label, value, icon }) => (
             <div key={label} className="flex flex-col items-center py-3 px-1 gap-1">
               {icon}
@@ -600,9 +606,12 @@ function DetailPanel({ org, onClose, partnerName, onRefresh, onEdit, latestRelea
                   <div key={label} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
                     <span className="text-slate-600">{label}</span>
                     <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${serviceStatusDot(status as "UP" | "DOWN" | "DEGRADED")}`} />
+                      <span className={`w-2 h-2 rounded-full ${
+                        status === "UNKNOWN" ? "bg-slate-300" : serviceStatusDot(status as "UP" | "DOWN" | "DEGRADED")
+                      }`} />
                       <span className={`text-xs font-medium ${
-                        status === "UP" ? "text-emerald-600" : status === "DEGRADED" ? "text-amber-600" : "text-red-600"
+                        status === "UP" ? "text-emerald-600" : status === "DEGRADED" ? "text-amber-600"
+                          : status === "UNKNOWN" ? "text-slate-400" : "text-red-600"
                       }`}>{status}</span>
                     </div>
                   </div>
@@ -611,9 +620,9 @@ function DetailPanel({ org, onClose, partnerName, onRefresh, onEdit, latestRelea
 
               <section className="space-y-2">
                 <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Metrics</h4>
-                <InfoRow label="Uptime"         value={org.status === "OFFLINE" ? "—" : `${health.uptimeHours}%`} />
-                <InfoRow label="Response Time"  value={org.status === "OFFLINE" ? "—" : `${health.responseTimeMs}ms`} />
-                <InfoRow label="Last Checked"   value={timeAgo(health.lastChecked)} />
+                <InfoRow label="Uptime"         value={health.uptimeHours == null ? "—" : `${health.uptimeHours}%`} />
+                <InfoRow label="Response Time"  value={health.responseTimeMs == null ? "—" : `${health.responseTimeMs}ms`} />
+                <InfoRow label="Last Checked"   value={health.lastChecked ? timeAgo(health.lastChecked) : "Never"} />
               </section>
             </div>
           )}

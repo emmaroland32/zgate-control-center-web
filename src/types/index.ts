@@ -37,6 +37,8 @@ export interface Organization {
   entitledVersion?: string;
   subscriptionValidUntil?: string;
   licenseTtlDays?: number;
+  /** Raw M2M service key — present only in a create / regenerate-key response (shown once). */
+  serviceApiKey?: string;
 }
 
 export type DeploymentTier = "SINGLE_NODE" | "HIGH_AVAILABILITY" | "MULTI_REGION";

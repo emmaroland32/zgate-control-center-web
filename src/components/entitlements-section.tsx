@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Server, ShieldCheck, Boxes } from "lucide-react";
+import { AlertTriangle, Server, ShieldCheck, Boxes, KeyRound, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { organizationService, deploymentService } from "@/services/controlcenter.service";
 import type { Organization, OrgInstance, DeploymentTier } from "@/types";
@@ -30,6 +30,24 @@ export default function EntitlementsSection({ org }: { org: Organization }) {
 
   const [instances, setInstances] = useState<OrgInstance[]>([]);
   const [loadingInstances, setLoadingInstances] = useState(true);
+
+  const [serviceKey, setServiceKey] = useState<string | null>(null);
+  const [rotatingKey, setRotatingKey] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(false);
+
+  async function regenerateKey() {
+    if (!confirm("Rotate the service key? The old key stops working immediately and the new one is shown only once.")) return;
+    setRotatingKey(true);
+    try {
+      const updated = await organizationService.regenerateKey(orgId);
+      setServiceKey(updated.serviceApiKey ?? null);
+      toast.success("Service key rotated — copy it now, it won't be shown again.");
+    } catch {
+      toast.error("Could not rotate the service key. Check your permissions.");
+    } finally {
+      setRotatingKey(false);
+    }
+  }
 
   useEffect(() => {
     let live = true;
@@ -174,6 +192,49 @@ export default function EntitlementsSection({ org }: { org: Organization }) {
             <button className="btn-primary text-xs" onClick={save} disabled={saving}>
               {saving ? "Saving…" : "Save entitlements"}
             </button>
+          </div>
+
+          {/* Service API key — the install's M2M credential (CONTROLCENTER_SERVICE_KEY). */}
+          <div className="border-t border-slate-100 pt-3">
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                <KeyRound size={13} className="text-slate-400" /> Service API key
+              </label>
+              <button
+                className="btn-secondary text-xs"
+                onClick={regenerateKey}
+                disabled={rotatingKey}
+              >
+                {rotatingKey ? "Rotating…" : serviceKey ? "Rotate again" : "Reveal / rotate"}
+              </button>
+            </div>
+            {serviceKey ? (
+              <div className="mt-2">
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 font-mono text-[11px] bg-slate-900 text-emerald-300 rounded-md px-3 py-2 break-all">
+                    {serviceKey}
+                  </code>
+                  <button
+                    className="btn-secondary text-xs"
+                    onClick={() => {
+                      navigator.clipboard.writeText(serviceKey);
+                      setCopiedKey(true);
+                      setTimeout(() => setCopiedKey(false), 1500);
+                    }}
+                  >
+                    {copiedKey ? <Check size={12} /> : <Copy size={12} />} {copiedKey ? "Copied" : "Copy"}
+                  </button>
+                </div>
+                <p className="mt-1 text-[11px] text-amber-600">
+                  Copy it now — it isn&apos;t stored and won&apos;t be shown again. Set it on the install as
+                  {" "}<code>CONTROLCENTER_SERVICE_KEY</code>.
+                </p>
+              </div>
+            ) : (
+              <p className="mt-1 text-[11px] text-slate-400">
+                Rotating issues a new key (shown once) and invalidates the old one.
+              </p>
+            )}
           </div>
         </div>
       </div>
