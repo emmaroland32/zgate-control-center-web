@@ -14,7 +14,7 @@ type Plan = {
 };
 type Usage = { usedBytes: number; quotaBytes: number; completedCount: number; active: boolean; estimatedMonthlyCharge: number; currency: string };
 type Stats = { plans: number; activePlans: number; backups: number; completed: number; failed: number; totalStoredBytes: number };
-type BackupRec = { id: string; label?: string; status: string; sizeBytes?: number; createdAt?: string; expiresAt?: string; nodeId?: string; clientEncrypted?: boolean };
+type BackupRec = { id: string; label?: string; status: string; sizeBytes?: number; createdAt?: string; expiresAt?: string; nodeId?: string; clientEncrypted?: boolean; verified?: boolean };
 
 const GIB = 1024 ** 3;
 const gib = (b?: number | null) => ((b ?? 0) / GIB).toFixed(2);
@@ -224,6 +224,11 @@ export default function BackupsPage() {
                         {b.status === "COMPLETED" ? <CheckCircle2 className="h-3 w-3" /> : b.status === "FAILED" ? <XCircle className="h-3 w-3" /> : null}
                         {b.status}
                       </span>
+                      {b.status === "COMPLETED" && (
+                        <span className={`ml-1 ${b.verified ? "badge badge-green" : "badge badge-gray"}`}>
+                          {b.verified ? "verified" : "unverified"}
+                        </span>
+                      )}
                     </td>
                     <td className="px-5 py-2">{fmtBytes(b.sizeBytes)}</td>
                     <td className="px-5 py-2 text-xs text-slate-500 font-mono">{b.nodeId ? b.nodeId.slice(0, 12) : "—"}</td>
