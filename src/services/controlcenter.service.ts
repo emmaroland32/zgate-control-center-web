@@ -591,6 +591,20 @@ export const telemetryService = {
 };
 
 // ============================================================
+// Managed Backups — BackupAdminController /api/v1/admin/backups
+// ============================================================
+export const backupService = {
+  list: (page = 0, size = 50) =>
+    api.get(`${V1}/admin/backups`, { params: { page, size } }).then((r) => unwrapPage(r.data)),
+  stats: () => api.get(`${V1}/admin/backups/stats`).then((r) => r.data),
+  forOrg: (orgId: string) => api.get(`${V1}/admin/backups/org/${orgId}`).then((r) => r.data),
+  usage: (orgId: string) => api.get(`${V1}/admin/backups/org/${orgId}/usage`).then((r) => r.data),
+  getPlan: (orgId: string) => api.get(`${V1}/admin/backups/org/${orgId}/plan`).then((r) => r.data),
+  updatePlan: (orgId: string, plan: object) =>
+    api.put(`${V1}/admin/backups/org/${orgId}/plan`, plan).then((r) => r.data),
+};
+
+// ============================================================
 // Audit — AuditController /api/v1/audit
 // ============================================================
 export const auditService = {
