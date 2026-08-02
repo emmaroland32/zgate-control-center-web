@@ -354,8 +354,29 @@ function normalizeUser(u: any) {
 // Auth — AuthController /api/v1/auth
 // ============================================================
 export const authService = {
-  login: (email: string, password: string) =>
-    api.post(`${V1}/auth/login`, { email, password }).then((r) => r.data),
+  login: (email: string, password: string, mfaCode?: string) =>
+    api.post(`${V1}/auth/login`, { email, password, ...(mfaCode ? { mfaCode } : {}) }).then((r) => r.data),
+};
+
+export type SecurityPolicy = {
+  passwordMinLength: number; passwordRequireMixedCase: boolean;
+  passwordRequireDigit: boolean; passwordRequireSymbol: boolean;
+  lockoutThreshold: number; lockoutBaseMinutes: number; lockoutMaxMinutes: number;
+  mfaSecretsEncrypted: boolean;
+};
+
+export const securityPolicyService = {
+  /** What the SERVER enforces — the Security tab shows this rather than editable pretend-toggles. */
+  get: (): Promise<SecurityPolicy> =>
+    api.get(`${V1}/users/security-policy`).then((r) => r.data),
+};
+
+export const mfaService = {
+  /** `currentCode` is required when MFA is already enabled — enrolling can never disable it. */
+  enroll: (currentCode?: string): Promise<{ secret: string; otpauthUri: string }> =>
+    api.post(`${V1}/users/me/mfa/enroll`, currentCode ? { currentCode } : {}).then((r) => r.data),
+  activate: (code: string) => api.post(`${V1}/users/me/mfa/activate`, { code }),
+  disable: (userId: string) => api.post(`${V1}/users/${userId}/mfa/disable`),
 };
 
 // ============================================================
@@ -508,6 +529,11 @@ export const deploymentService = {
 // Shared Services — SharedServiceController /api/v1/shared-services
 // ============================================================
 export const sharedServicesCatalog = {
+  quotas: (): Promise<{
+    organizationId: string; orgName: string; serviceId: string; serviceName: string;
+    callLimit: number | null; usedThisMonth: number; usedPct: number | null;
+  }[]> => api.get(`${V1}/shared-services/quotas`).then((r) => r.data ?? []),
+
   getAll: () => api.get(`${V1}/shared-services`).then((r) => normalizeSharedServiceList(r.data)),
   getById: (id: string) => api.get(`${V1}/shared-services/${id}`).then((r) => normalizeSharedService(r.data)),
   create: (data: object) =>
@@ -895,4 +921,298 @@ export const logService = {
   // Legacy alias used by some pages
   getSystemLogs: (params?: object) =>
     api.get(`${V1}/telemetry`, { params }).then((r) => r.data),
+};
+
+// ============================================================
+// Cloud Provisioning — ProvisioningController /api/v1/provisioning
+// ============================================================
+// Stands a full ZGATE deployment up in a customer's own cloud via Terraform.
+// Distinct from `deploymentService`, which tracks version rollouts to an
+// EXISTING install — this creates the infrastructure that install runs on.
+
+export type CloudProvider = "aws" | "azure" | "gcp" | "baremetal";
+
+export type CloudAuthMode =
+  | "AWS_ASSUME_ROLE"
+  | "AWS_STATIC_KEYS"
+  | "AZURE_SERVICE_PRINCIPAL"
+  | "GCP_SERVICE_ACCOUNT"
+  | "SSH_KEY";
+
+export type ProvisioningTarget =
+  | "aws-ecs" | "aws-ec2" | "azure-aca" | "gcp-cloudrun" | "baremetal";
+
+export type StackStatus =
+  | "DRAFT" | "PLANNING" | "PLANNED" | "APPLYING" | "ACTIVE"
+  | "FAILED" | "DESTROYING" | "DESTROYED" | "DRIFTED";
+
+export interface CloudCredential {
+  id: string;
+  organizationId: string;
+  provider: CloudProvider;
+  authMode: CloudAuthMode;
+  displayName: string;
+  defaultRegion?: string;
+  awsAccountId?: string;
+  awsRoleArn?: string;
+  /** Shown so the customer can paste it into their role trust policy. Not a secret. */
+  awsExternalId?: string;
+  awsAccessKeyId?: string;
+  azureSubscriptionId?: string;
+  azureTenantId?: string;
+  gcpProjectId?: string;
+  // Bare metal (SSH_KEY). The private key itself is never returned.
+  sshHost?: string;
+  sshPort?: number;
+  sshUser?: string;
+  sshHostPublicKey?: string;
+  lastVerifiedAt?: string;
+  lastVerifyStatus?: "OK" | "FAILED";
+  lastVerifyMessage?: string;
+  enabled: boolean;
+  createdAt: string;
+  // secretCiphertext / secretKeyId are never returned by the API.
+}
+
+export interface InfrastructureStack {
+  id: string;
+  organizationId: string;
+  environment: "dev" | "staging" | "prod";
+  target: ProvisioningTarget;
+  cloudCredentialId?: string;
+  status: StackStatus;
+  publicUrl?: string;
+  webUrl?: string;
+  fingerprint?: string;
+  stateBucket?: string;
+  stateKey?: string;
+  lastPlanAt?: string;
+  lastAppliedAt?: string;
+  lastDriftCheckAt?: string;
+  driftDetected: boolean;
+  driftSummary?: string;
+  createdBy?: string;
+  createdAt: string;
+}
+
+export interface ProvisioningRun {
+  id: string;
+  stackId: string;
+  organizationId: string;
+  action: "PLAN" | "APPLY" | "DESTROY" | "REFRESH";
+  status: "QUEUED" | "RUNNING" | "SUCCESS" | "FAILED" | "CANCELLED";
+  resourcesToAdd?: number;
+  resourcesToChange?: number;
+  resourcesToDestroy?: number;
+  log?: string;
+  errorMessage?: string;
+  exitCode?: number;
+  triggeredBy?: string;
+  startedAt?: string;
+  completedAt?: string;
+  createdAt: string;
+}
+
+export interface SshCheck {
+  name: string;
+  status: "ok" | "warn" | "fail";
+  /** Carries the concrete remedy, not just a status — render it verbatim. */
+  detail: string;
+}
+
+export interface SshCheckResult {
+  reachable: boolean;
+  host?: string;
+  port?: number;
+  user?: string;
+  checks: SshCheck[];
+}
+
+export interface ProvisioningReadiness {
+  available: boolean;
+  runnerReason?: string | null;
+  stateConfigured: boolean;
+  stateReason?: string;
+}
+
+export const provisioningService = {
+  /** Why provisioning is unavailable, in terms an operator can act on. */
+  readiness: (): Promise<ProvisioningReadiness> =>
+    api.get(`${V1}/provisioning/readiness`).then((r) => r.data),
+
+  // ── Credentials ──────────────────────────────────────────
+  getCredentials: (orgId: string): Promise<CloudCredential[]> =>
+    api.get(`${V1}/provisioning/credentials/org/${orgId}`).then((r) => r.data ?? []),
+
+  createCredential: (data: {
+    organizationId: string;
+    authMode: CloudAuthMode;
+    displayName: string;
+    defaultRegion?: string;
+    awsAccountId?: string;
+    awsRoleArn?: string;
+    awsAccessKeyId?: string;
+    azureSubscriptionId?: string;
+    azureTenantId?: string;
+    azureClientId?: string;
+    gcpProjectId?: string;
+    gcpClientEmail?: string;
+    sshHost?: string;
+    sshPort?: number;
+    sshUser?: string;
+    /** The server's host public key. Not secret; pinning it prevents impersonation. */
+    sshHostPublicKey?: string;
+    /**
+     * The mode-specific secret — AWS secret key, Azure client secret, GCP service-account JSON,
+     * or an UNENCRYPTED SSH private key. Encrypted server-side on arrival and never returned.
+     */
+    secret?: string;
+  }): Promise<CloudCredential> =>
+    api.post(`${V1}/provisioning/credentials`, data).then((r) => r.data),
+
+  deleteCredential: (id: string) =>
+    api.delete(`${V1}/provisioning/credentials/${id}`).then((r) => r.data),
+
+  setCredentialEnabled: (id: string, enabled: boolean): Promise<CloudCredential> =>
+    api.patch(`${V1}/provisioning/credentials/${id}/enabled`, { enabled }).then((r) => r.data),
+
+  /**
+   * Probe a customer-supplied server before provisioning. Read-only: it connects, inspects and
+   * changes nothing, so it is safe to run repeatedly while access is being sorted out.
+   */
+  sshCheck: (credentialId: string, minMemoryMb = 4096, minDiskGb = 40): Promise<SshCheckResult> =>
+    api
+      .post(`${V1}/provisioning/credentials/${credentialId}/ssh-check`, null, {
+        params: { minMemoryMb, minDiskGb },
+        timeout: 180000,
+      })
+      .then((r) => r.data),
+
+  // ── Stacks ───────────────────────────────────────────────
+  getStacks: (): Promise<InfrastructureStack[]> =>
+    api.get(`${V1}/provisioning/stacks`).then((r) => r.data ?? []),
+
+  getStacksByOrg: (orgId: string): Promise<InfrastructureStack[]> =>
+    api.get(`${V1}/provisioning/stacks/org/${orgId}`).then((r) => r.data ?? []),
+
+  getStack: (id: string): Promise<InfrastructureStack> =>
+    api.get(`${V1}/provisioning/stacks/${id}`).then((r) => r.data),
+
+  /** Renders a spec and runs a PLAN. Creates nothing — review before applying. */
+  provision: (data: object): Promise<InfrastructureStack> =>
+    api.post(`${V1}/provisioning/provision`, data, { timeout: 60000 }).then((r) => r.data),
+
+  /** Applies the reviewed plan. Real infrastructure, real cloud spend. */
+  apply: (stackId: string): Promise<ProvisioningRun> =>
+    api.post(`${V1}/provisioning/stacks/${stackId}/apply`).then((r) => r.data),
+
+  /**
+   * Upgrade a stack to a release: rewrites only the image block of the stored spec (every other
+   * operator decision is preserved) and runs a PLAN. Omitting releaseId means the org's latest
+   * entitled release.
+   */
+  upgrade: (stackId: string, releaseId?: string): Promise<ProvisioningRun> =>
+    api.post(`${V1}/provisioning/stacks/${stackId}/upgrade`, releaseId ? { releaseId } : {})
+      .then((r) => r.data),
+
+  refresh: (stackId: string): Promise<ProvisioningRun> =>
+    api.post(`${V1}/provisioning/stacks/${stackId}/refresh`).then((r) => r.data),
+
+  /** `confirmation` must equal the organization's slug. */
+  destroy: (stackId: string, confirmation: string): Promise<ProvisioningRun> =>
+    api.post(`${V1}/provisioning/stacks/${stackId}/destroy`, { confirmation }).then((r) => r.data),
+
+  // ── Runs ─────────────────────────────────────────────────
+  getRuns: (stackId: string, page = 0, size = 20): Promise<ProvisioningRun[]> =>
+    api
+      .get(`${V1}/provisioning/stacks/${stackId}/runs`, { params: { page, size } })
+      .then((r) => r.data?.content ?? r.data ?? []),
+
+  /**
+   * A single run with its full terraform log. Polled while a run is in flight;
+   * `silent` suppresses the success toast that would otherwise fire on each poll.
+   */
+  getRun: (runId: string): Promise<ProvisioningRun> =>
+    api.get(`${V1}/provisioning/runs/${runId}`, {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      silent: true,
+    } as any).then((r) => r.data),
+};
+
+// ─── Fleet operations ─────────────────────────────────────────────────────────
+
+export type FleetRollout = {
+  id: string; releaseId: string; releaseVersion: string;
+  status: "PENDING" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "FAILED" | "CANCELLED";
+  canarySize: number; waveSize: number; autoApply: boolean; soakMinutes: number;
+  statusReason?: string | null; currentWave: number; createdBy: string;
+  approvalStatus?: "PENDING" | "APPROVED"; approvedBy?: string | null;
+  createdAt?: string; updatedAt?: string; completedAt?: string | null;
+};
+
+export type FleetRolloutItem = {
+  id: string; rolloutId: string; stackId: string; organizationId: string;
+  wave: number;
+  status: "PENDING" | "PLANNING" | "PLANNED" | "APPLYING" | "SOAKING" | "SUCCEEDED" | "FAILED" | "SKIPPED";
+  fromVersion?: string | null; toVersion: string;
+  planRunId?: string | null; applyRunId?: string | null; deploymentId?: string | null;
+  appliedAt?: string | null; errorMessage?: string | null;
+};
+
+export type FleetStackSummary = {
+  stackId: string; organizationId: string; orgName?: string | null; orgSlug?: string | null;
+  environment: string; target: string; releaseVersion?: string | null; status: string;
+  driftDetected: boolean; lastAppliedAt?: string | null; publicUrl?: string | null;
+};
+
+export type FleetOverview = {
+  totalOrgs: number;
+  orgsByStatus: Record<string, number>;
+  versionSpread: Record<string, number>;
+  latestRelease?: string | null;
+  stacks: FleetStackSummary[];
+  subscriptionsLapsingSoon: { organizationId: string; orgName: string; orgSlug: string; validUntil: string; lapsed: boolean }[];
+  backups: { organizationId: string; orgName?: string | null; orgSlug?: string | null; lastSuccessfulBackupAt?: string | null; stale: boolean }[];
+  liveRollouts: number;
+  serviceKeyEnforced?: boolean;
+  costTrackingEnabled?: boolean;
+  margins?: {
+    organizationId: string; orgName: string; orgSlug: string;
+    monthlyFee: number | null; currentMonthCost: number | null; margin: number | null;
+  }[];
+};
+
+export const fleetService = {
+  overview: (): Promise<FleetOverview> => api.get(`${V1}/fleet/overview`).then((r) => r.data),
+
+  rollouts: (): Promise<FleetRollout[]> => api.get(`${V1}/fleet/rollouts`).then((r) => r.data ?? []),
+
+  rollout: (id: string): Promise<{ rollout: FleetRollout; items: FleetRolloutItem[] }> =>
+    api.get(`${V1}/fleet/rollouts/${id}`).then((r) => r.data),
+
+  createRollout: (data: {
+    releaseId: string; stackIds?: string[]; canarySize?: number; waveSize?: number;
+    autoApply?: boolean; soakMinutes?: number;
+  }): Promise<FleetRollout> => api.post(`${V1}/fleet/rollouts`, data).then((r) => r.data),
+
+  pauseRollout: (id: string, reason?: string): Promise<FleetRollout> =>
+    api.post(`${V1}/fleet/rollouts/${id}/pause`, reason ? { reason } : {}).then((r) => r.data),
+
+  resumeRollout: (id: string): Promise<FleetRollout> =>
+    api.post(`${V1}/fleet/rollouts/${id}/resume`).then((r) => r.data),
+
+  cancelRollout: (id: string): Promise<FleetRollout> =>
+    api.post(`${V1}/fleet/rollouts/${id}/cancel`).then((r) => r.data),
+
+  approveRollout: (id: string): Promise<FleetRollout> =>
+    api.post(`${V1}/fleet/rollouts/${id}/approve`).then((r) => r.data),
+
+  sla: (windowDays = 30): Promise<OrgSla[]> =>
+    api.get(`${V1}/fleet/sla`, { params: { windowDays } }).then((r) => r.data ?? []),
+};
+
+export type OrgSla = {
+  organizationId: string; orgName: string; orgSlug: string;
+  tracked: boolean; uptimePct: number | null; incidentCount: number;
+  incidents: { startedAt: string; endedAt: string; durationSeconds: number }[];
 };

@@ -5,7 +5,7 @@ import {
   Settings, Shield, Bell, Key, Package, Save, Check,
   Eye, EyeOff, RefreshCw, AlertTriangle, Globe, Lock,
 } from "lucide-react";
-import { configService, apiError } from "@/services/controlcenter.service";
+import { configService, securityPolicyService, apiError, SecurityPolicy } from "@/services/controlcenter.service";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -161,6 +161,7 @@ export default function SettingsPage() {
 
   const [general, setGeneral] = useState<GeneralConfig>(DEFAULT_GENERAL);
   const [security, setSecurity] = useState<SecurityConfig>(DEFAULT_SECURITY);
+  const [policy, setPolicy] = useState<SecurityPolicy | null>(null);
   const [notifications, setNotifications] = useState<NotificationConfig>(DEFAULT_NOTIFICATIONS);
   const [licensing, setLicensing] = useState<LicensingConfig>(DEFAULT_LICENSING);
   const [registry, setRegistry] = useState<RegistryConfig>(DEFAULT_REGISTRY);
@@ -203,6 +204,10 @@ export default function SettingsPage() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    securityPolicyService.get().then(setPolicy).catch(() => setPolicy(null));
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -363,82 +368,70 @@ export default function SettingsPage() {
             {/* ── SECURITY ─────────────────────────────────────────────── */}
             {tab === "security" && (
               <div className="space-y-5">
-                <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <h2 className="text-sm font-bold text-slate-800 mb-1 flex items-center gap-2">
                   <Shield size={15} className="text-controlcenter-500" />
-                  Security Settings
+                  Security
                 </h2>
+                <p className="text-xs text-slate-500">
+                  These controls are enforced by the server and set through deployment configuration,
+                  not from this screen. They are shown read-only on purpose: this tab previously
+                  offered editable toggles that nothing applied, which is worse than showing nothing
+                  because it looks like protection.
+                </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="label">Session Timeout (minutes)</label>
-                    <input className="input" type="number" min="5" max="480" value={security.sessionTimeout}
-                      onChange={(e) => setSecurity({ ...security, sessionTimeout: e.target.value })} />
-                    <p className="text-xs text-slate-400 mt-1">Idle sessions expire after this duration</p>
-                  </div>
-                  <div>
-                    <label className="label">Failed Login Lockout Threshold</label>
-                    <input className="input" type="number" min="1" max="20" value={security.loginLockoutThreshold}
-                      onChange={(e) => setSecurity({ ...security, loginLockoutThreshold: e.target.value })} />
-                    <p className="text-xs text-slate-400 mt-1">Lock account after N failed attempts</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between py-3 border-y border-slate-100">
-                  <div>
-                    <div className="text-sm font-medium text-slate-800">Enforce MFA</div>
-                    <div className="text-xs text-slate-400 mt-0.5">Require multi-factor authentication for all admin users</div>
-                  </div>
-                  <Toggle checked={security.mfaEnforced} onChange={(v) => setSecurity({ ...security, mfaEnforced: v })} />
-                </div>
-
-                <div>
-                  <label className="label">IP Allowlist <span className="text-slate-400 font-normal">(one per line, leave blank to allow all)</span></label>
-                  <textarea
-                    className="input h-24 font-mono text-xs resize-none"
-                    placeholder={"192.168.1.0/24\n10.0.0.0/8\n41.0.0.0/8"}
-                    value={security.ipAllowlist}
-                    onChange={(e) => setSecurity({ ...security, ipAllowlist: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <div className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
-                    <Lock size={13} className="text-slate-400" />
-                    Password Policy
-                  </div>
-                  <div className="space-y-3 pl-1">
-                    <div>
-                      <label className="label">Minimum Length</label>
-                      <input className="input w-28" type="number" min="6" max="64" value={security.passwordMinLength}
-                        onChange={(e) => setSecurity({ ...security, passwordMinLength: e.target.value })} />
+                {!policy && <p className="text-sm text-slate-400">Loading…</p>}
+                {policy && (
+                  <div className="space-y-4">
+                    <div className="card p-4">
+                      <div className="text-sm font-semibold text-slate-800 mb-2">Password policy</div>
+                      <ul className="text-sm text-slate-600 space-y-1">
+                        <li>Minimum length: <span className="font-mono">{policy.passwordMinLength}</span></li>
+                        <li>{policy.passwordRequireMixedCase ? "Requires" : "Does not require"} upper and lower case</li>
+                        <li>{policy.passwordRequireDigit ? "Requires" : "Does not require"} a digit</li>
+                        <li>{policy.passwordRequireSymbol ? "Requires" : "Does not require"} a symbol</li>
+                      </ul>
+                      <p className="text-[11px] text-slate-400 mt-2 font-mono">
+                        controlcenter.auth.password.*
+                      </p>
                     </div>
-                    <div className="space-y-2.5">
-                      <Toggle
-                        checked={security.requireUppercase}
-                        onChange={(v) => setSecurity({ ...security, requireUppercase: v })}
-                        label="Require uppercase letters"
-                      />
-                      <Toggle
-                        checked={security.requireNumbers}
-                        onChange={(v) => setSecurity({ ...security, requireNumbers: v })}
-                        label="Require numbers"
-                      />
-                      <Toggle
-                        checked={security.requireSymbols}
-                        onChange={(v) => setSecurity({ ...security, requireSymbols: v })}
-                        label="Require symbols (!@#$…)"
-                      />
+
+                    <div className="card p-4">
+                      <div className="text-sm font-semibold text-slate-800 mb-2">Sign-in lockout</div>
+                      <p className="text-sm text-slate-600">
+                        Locks after <span className="font-mono">{policy.lockoutThreshold}</span> consecutive
+                        failures for <span className="font-mono">{policy.lockoutBaseMinutes}</span> min,
+                        doubling per further failure up to{" "}
+                        <span className="font-mono">{policy.lockoutMaxMinutes}</span> min. Applies to a wrong
+                        password and a wrong authenticator code alike.
+                      </p>
+                      <p className="text-[11px] text-slate-400 mt-2 font-mono">controlcenter.auth.lockout.*</p>
+                    </div>
+
+                    <div className="card p-4">
+                      <div className="text-sm font-semibold text-slate-800 mb-2">Two-factor authentication</div>
+                      <p className="text-sm text-slate-600">
+                        Per-operator, enrolled from the Users screen. Codes are single-use;
+                        re-enrolling requires a current code, so a session alone cannot remove the factor.
+                      </p>
+                      <p className={`text-sm mt-2 ${policy.mfaSecretsEncrypted ? "text-emerald-700" : "text-red-700"}`}>
+                        {policy.mfaSecretsEncrypted
+                          ? "TOTP secrets are encrypted at rest."
+                          : "Secret encryption is NOT configured — enrollment is refused until controlcenter.provisioning.encryptionKey is set."}
+                      </p>
+                    </div>
+
+                    <div className="card p-4">
+                      <div className="text-sm font-semibold text-slate-800 mb-2">Network restrictions</div>
+                      <p className="text-sm text-slate-600">
+                        IP allowlisting is not enforced by this application — put it on the load balancer
+                        or WAF in front of the console, where it can drop traffic before it reaches Java.
+                      </p>
                     </div>
                   </div>
-                </div>
-
-                <div className="flex justify-end pt-2 border-t border-slate-100">
-                  <SaveButton saving={saving} saved={saved} onClick={handleSave} />
-                </div>
+                )}
               </div>
             )}
 
-            {/* ── NOTIFICATIONS ─────────────────────────────────────────── */}
             {tab === "notifications" && (
               <div className="space-y-5">
                 <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">

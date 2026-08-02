@@ -36,6 +36,13 @@ export default function EntitlementsSection({ org }: { org: Organization }) {
   const [entitledVersion, setEntitledVersion] = useState<string>(org.entitledVersion ?? "");
   const [ttlDays, setTtlDays] = useState<string>(org.licenseTtlDays?.toString() ?? "");
   const [subUntil, setSubUntil] = useState<string>(toLocal(org.subscriptionValidUntil));
+  const [monthlyFee, setMonthlyFee] = useState<string>(
+    (org as { subscriptionMonthlyFee?: number | null }).subscriptionMonthlyFee?.toString() ?? "");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const orgAny = org as any;
+  const [mwStart, setMwStart] = useState<string>(orgAny.maintenanceWindowStart ?? "");
+  const [mwEnd, setMwEnd] = useState<string>(orgAny.maintenanceWindowEnd ?? "");
+  const [mwTz, setMwTz] = useState<string>(orgAny.maintenanceTimezone ?? "");
   const [saving, setSaving] = useState(false);
 
   const [instances, setInstances] = useState<OrgInstance[]>([]);
@@ -113,6 +120,10 @@ export default function EntitlementsSection({ org }: { org: Organization }) {
         entitledVersion: entitledVersion || null,
         licenseTtlDays: ttlDays === "" ? null : Number(ttlDays),
         subscriptionValidUntil: subUntil || null,
+        subscriptionMonthlyFee: monthlyFee === "" ? null : Number(monthlyFee),
+        maintenanceWindowStart: mwStart || null,
+        maintenanceWindowEnd: mwEnd || null,
+        maintenanceTimezone: mwTz || null,
       });
       toast.success("Entitlements updated");
     } catch {
@@ -188,6 +199,36 @@ export default function EntitlementsSection({ org }: { org: Organization }) {
                 onChange={(e) => setTtlDays(e.target.value)}
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Monthly subscription fee</label>
+            <input
+              className="input"
+              type="number"
+              min={0}
+              step="0.01"
+              placeholder="blank = billed out of band"
+              value={monthlyFee}
+              onChange={(e) => setMonthlyFee(e.target.value)}
+            />
+            <p className="mt-1 text-[11px] text-slate-400">
+              With a fee and a paid-through date set, a renewal invoice is raised automatically before the
+              subscription lapses; paying it extends the paid-through date.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Maintenance window (fleet auto-applies only)</label>
+            <div className="grid grid-cols-3 gap-2">
+              <input className="input" type="time" value={mwStart} onChange={(e) => setMwStart(e.target.value)} />
+              <input className="input" type="time" value={mwEnd} onChange={(e) => setMwEnd(e.target.value)} />
+              <input className="input" placeholder="e.g. Africa/Lagos" value={mwTz} onChange={(e) => setMwTz(e.target.value)} />
+            </div>
+            <p className="mt-1 text-[11px] text-slate-400">
+              Rollout auto-applies run only inside this window (org-local time; start after end wraps
+              midnight). Manual applies are never blocked. Leave empty for no restriction.
+            </p>
           </div>
 
           {subLapsed && (

@@ -11,13 +11,15 @@ function LoginForm() {
   const params = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaRequired, setMfaRequired] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     try {
-      const data = await authService.login(email, password);
+      const data = await authService.login(email, password, mfaCode || undefined);
       const token: string = data.accessToken || data.token;
 
       // Persist in localStorage for Axios interceptor
@@ -29,7 +31,17 @@ function LoginForm() {
       const next = params.get("next") || "/";
       router.push(next);
     } catch (e) {
-      toast.error(apiError(e));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const code = (e as any)?.response?.data?.code;
+      if (code === "MFA_REQUIRED") {
+        setMfaRequired(true);
+        toast.info("Enter the code from your authenticator app");
+      } else if (code === "ACCOUNT_LOCKED") {
+        // Distinct from bad credentials: retrying immediately only extends the backoff.
+        toast.error(apiError(e), { duration: 8000 });
+      } else {
+        toast.error(apiError(e));
+      }
     } finally {
       setLoading(false);
     }
@@ -61,6 +73,21 @@ function LoginForm() {
                      placeholder:text-controlcenter-500 focus:outline-none focus:ring-2 focus:ring-controlcenter-500"
         />
       </div>
+      {mfaRequired && (
+        <div>
+          <label className="block text-xs font-medium text-controlcenter-300 mb-1.5">Authenticator code</label>
+          <input
+            type="text"
+            inputMode="numeric"
+            autoFocus
+            value={mfaCode}
+            onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            placeholder="123456"
+            className="w-full px-3 py-2.5 bg-controlcenter-800 border border-white/10 rounded-lg text-sm text-white tracking-[0.4em]
+                       placeholder:text-controlcenter-500 focus:outline-none focus:ring-2 focus:ring-controlcenter-500"
+          />
+        </div>
+      )}
 
       <button
         type="submit"

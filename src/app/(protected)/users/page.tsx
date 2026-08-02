@@ -7,7 +7,7 @@ import {
   RefreshCw, AlertTriangle, CheckCircle2, X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { userService, apiError } from "@/services/controlcenter.service";
+import { userService, mfaService, apiError } from "@/services/controlcenter.service";
 import { timeAgo, formatDate } from "@/lib/utils";
 import type { ControlCenterUser } from "@/types";
 
@@ -353,6 +353,8 @@ export default function UsersPage() {
     setActionLoading(false);
   }
 
+  const [showMfa, setShowMfa] = useState(false);
+
   const totalUsers = users.length;
   const activeUsers = users.filter((u) => u.active).length;
   const adminUsers = users.filter((u) => u.role === "SUPER_ADMIN" || u.role === "ADMIN").length;
@@ -375,6 +377,10 @@ export default function UsersPage() {
             <button onClick={load} disabled={loading} className="btn-secondary py-1.5 px-3 text-xs">
               <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
               Refresh
+            </button>
+            <button onClick={() => setShowMfa(true)} className="btn-secondary py-1.5 px-3 text-xs">
+              <Shield size={13} />
+              Secure my sign-in (MFA)
             </button>
             <button onClick={() => setShowAdd(true)} className="btn-primary">
               <Plus size={15} />
@@ -557,6 +563,8 @@ export default function UsersPage() {
         </div>
       </div>
 
+      {showMfa && <MfaEnrollDialog onClose={() => setShowMfa(false)} />}
+
       {/* Add User Dialog */}
       <AddUserDialog
         open={showAdd}
@@ -617,6 +625,115 @@ export default function UsersPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+
+function MfaEnrollDialog({ onClose }: { onClose: () => void }) {
+  const [secret, setSecret] = useState<string | null>(null);
+  const [uri, setUri] = useState<string>("");
+  const [code, setCode] = useState("");
+  const [currentCode, setCurrentCode] = useState("");
+  const [needsCurrentCode, setNeedsCurrentCode] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  async function enroll() {
+    setBusy(true);
+    try {
+      const r = await mfaService.enroll(currentCode || undefined);
+      setSecret(r.secret);
+      setUri(r.otpauthUri);
+    } catch (e) {
+      // Already protected: replacing an authenticator requires proving you hold the current one.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if ((e as any)?.response?.data?.code === "MFA_REQUIRED") {
+        setNeedsCurrentCode(true);
+        toast.info("Enter a code from your current authenticator to replace it");
+      } else {
+        toast.error(apiError(e));
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function activate() {
+    setBusy(true);
+    try {
+      await mfaService.activate(code);
+      onClose();
+    } catch (e) {
+      toast.error(apiError(e, "That code was not accepted"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+        <h2 className="text-lg font-semibold text-slate-900">Two-factor authentication</h2>
+        {!secret && (
+          <>
+            <p className="text-sm text-slate-600">
+              Adds a 6-digit authenticator code to your sign-in. You&apos;ll need an authenticator app
+              (Google Authenticator, 1Password, Authy…).
+            </p>
+            {needsCurrentCode && (
+              <div>
+                <label className="text-xs font-medium text-slate-500">Current authenticator code</label>
+                <input
+                  className="input w-full tracking-[0.4em] text-center mt-1"
+                  inputMode="numeric"
+                  placeholder="123456"
+                  value={currentCode}
+                  onChange={(e) => setCurrentCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                />
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <button className="btn-secondary" onClick={onClose}>Cancel</button>
+              <button className="btn-primary"
+                      disabled={busy || (needsCurrentCode && currentCode.length !== 6)}
+                      onClick={enroll}>
+                {busy ? "Preparing…" : needsCurrentCode ? "Replace authenticator" : "Start enrollment"}
+              </button>
+            </div>
+          </>
+        )}
+        {secret && (
+          <>
+            <p className="text-sm text-slate-600">
+              Add this secret to your authenticator app (paste the setup URI or enter the key manually),
+              then confirm with a code. MFA is enforced only after a valid code.
+            </p>
+            <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+              <div>
+                <div className="text-[11px] font-medium text-slate-500">Secret key</div>
+                <div className="font-mono text-sm break-all select-all">{secret}</div>
+              </div>
+              <div>
+                <div className="text-[11px] font-medium text-slate-500">Setup URI</div>
+                <div className="font-mono text-[11px] break-all select-all text-slate-600">{uri}</div>
+              </div>
+            </div>
+            <input
+              className="input w-full tracking-[0.4em] text-center"
+              inputMode="numeric"
+              placeholder="123456"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            />
+            <div className="flex justify-end gap-2">
+              <button className="btn-secondary" onClick={onClose}>Cancel</button>
+              <button className="btn-primary" disabled={busy || code.length !== 6} onClick={activate}>
+                {busy ? "Verifying…" : "Verify & enable"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

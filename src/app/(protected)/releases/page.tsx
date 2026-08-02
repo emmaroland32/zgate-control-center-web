@@ -61,6 +61,8 @@ function PublishDialog({ onClose, onPublished }: PublishDialogProps) {
     channel: "STABLE" as ReleaseChannel,
     dockerTag: "",
     dockerRegistry: "registry.zgate.io",
+    imageDigest: "",
+    webImageDigest: "",
     releaseNotes: "",
     breakingChanges: false,
     requiredMigrations: "",
@@ -90,6 +92,8 @@ function PublishDialog({ onClose, onPublished }: PublishDialogProps) {
         channel: form.channel,
         dockerTag: form.dockerTag,
         dockerRegistry: form.dockerRegistry,
+        imageDigest: form.imageDigest.trim(),
+        webImageDigest: form.webImageDigest.trim(),
         releaseNotes: form.releaseNotes,
         hasBreakingChanges: form.breakingChanges,
         migrations: JSON.stringify(
@@ -163,6 +167,28 @@ function PublishDialog({ onClose, onPublished }: PublishDialogProps) {
                 placeholder="registry.zgate.io"
                 value={form.dockerRegistry}
                 onChange={(e) => set("dockerRegistry", e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Image digests — pin what customers pull, and give the runtime digest gate a value */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Backend image digest</label>
+              <input
+                className="input font-mono text-xs"
+                placeholder="sha256:… (from cosign/CI — pins pulls to immutable bytes)"
+                value={form.imageDigest}
+                onChange={(e) => set("imageDigest", e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="label">Web image digest</label>
+              <input
+                className="input font-mono text-xs"
+                placeholder="sha256:… (optional)"
+                value={form.webImageDigest}
+                onChange={(e) => set("webImageDigest", e.target.value)}
               />
             </div>
           </div>

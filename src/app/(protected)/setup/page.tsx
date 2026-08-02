@@ -1902,6 +1902,14 @@ export default function SetupWizardPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      {/* Which deployment flow is this? The wizard generates files for a MANUAL install; the
+          supported path for cloud customers is Terraform-driven Cloud Provisioning. */}
+      <div className="bg-blue-50 border-b border-blue-200 px-8 py-2.5 text-xs text-blue-800">
+        This wizard generates a <span className="font-semibold">manual install kit</span> (docker-compose /
+        K8s files you apply yourself) — for air-gapped or hands-on installs. For cloud deployments that
+        Control Center provisions, upgrades and monitors, use{" "}
+        <a href="/provisioning" className="font-semibold underline">Cloud Provisioning</a> instead.
+      </div>
       {/* Top bar */}
       <div className="sticky top-0 z-20 bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">

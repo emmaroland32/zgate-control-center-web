@@ -9,7 +9,7 @@ import {
   ScrollText, Users, Plug, Settings, ChevronRight, LogOut,
   Zap, Bell, Activity, Globe, WandSparkles, Server, SlidersHorizontal,
   FileText, AlertOctagon, Database, BarChart3, GitBranch,
-  Cpu, Receipt, Gauge, ShieldAlert, HardDriveDownload,
+  Cpu, Receipt, Gauge, ShieldAlert, HardDriveDownload, CloudCog, Radar,
 } from "lucide-react";
 
 /** Decode the JWT payload (base64) without verifying — display only */
@@ -42,11 +42,17 @@ function useCurrentUser() {
   return user;
 }
 
+// Minimum role that can USE the screen (server-enforced); hiding it here just avoids dead-end
+// clicks for SUPPORT/VIEWER operators. Ranks: VIEWER < SUPPORT < ADMIN < SUPER_ADMIN.
+const ROLE_RANK: Record<string, number> = { VIEWER: 0, SUPPORT: 1, ADMIN: 2, SUPER_ADMIN: 3 };
+const ADMIN_ONLY = new Set(["/users", "/integrations", "/settings", "/config", "/database", "/infrastructure"]);
+
 const sections = [
   {
     label: "Overview",
     items: [
       { href: "/", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/fleet", label: "Fleet Operations", icon: Radar },
     ],
   },
   {
@@ -56,6 +62,9 @@ const sections = [
       { href: "/organizations", label: "Organizations", icon: Building2 },
       { href: "/releases", label: "Releases", icon: Rocket },
       { href: "/deployments", label: "Deployments", icon: Globe },
+      // Creates the infrastructure a deployment runs on, as distinct from
+      // /deployments, which rolls versions out to an install that already exists.
+      { href: "/provisioning", label: "Cloud Provisioning", icon: CloudCog },
     ],
   },
   {
@@ -127,7 +136,14 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-4">
-        {sections.map((section) => (
+        {sections
+          .map((section) => ({
+            ...section,
+            items: section.items.filter(
+              (item) => !ADMIN_ONLY.has(item.href) || (ROLE_RANK[user.role] ?? 0) >= ROLE_RANK.ADMIN),
+          }))
+          .filter((section) => section.items.length > 0)
+          .map((section) => (
           <div key={section.label}>
             <div className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-controlcenter-500">
               {section.label}
