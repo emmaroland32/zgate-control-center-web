@@ -17,6 +17,8 @@ function createClient(): AxiosInstance {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("controlcenter_token");
       if (token) config.headers.Authorization = `Bearer ${token}`;
+      const ticket = currentStepUpTicket();
+      if (ticket) config.headers["X-StepUp-Ticket"] = ticket;
     }
     return config;
   });
@@ -52,6 +54,14 @@ function createClient(): AxiosInstance {
     (err) => {
       // A 401 from the login call itself is a bad-credentials result — let the login page show it,
       // don't treat it as an expired session and redirect (which would swallow the message).
+      // A destructive action needs a fresh re-authentication. Surface it as a prompt rather than
+      // a bare "forbidden" — the operator IS allowed to do this, they just have to confirm.
+      if (err.response?.status === 403
+          && err.response?.data?.code === "STEP_UP_REQUIRED"
+          && typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("zgate:step-up-required"));
+      }
+
       const isLogin = (err.config?.url ?? "").includes("/auth/login");
       if (err.response?.status === 401 && !isLogin && typeof window !== "undefined") {
         localStorage.removeItem("controlcenter_token");
@@ -358,7 +368,27 @@ function normalizeUser(u: any) {
 // ============================================================
 // Auth — AuthController /api/v1/auth
 // ============================================================
+/**
+ * Ticket for the next destructive call. Held in memory only — it is proof of a re-authentication
+ * that just happened, not a session, so it must not outlive the tab or be readable by anything
+ * that can read localStorage.
+ */
+let stepUpTicket: { value: string; expiresAt: number } | null = null;
+
+export function setStepUpTicket(value: string, expiresInSeconds: number) {
+  stepUpTicket = { value, expiresAt: Date.now() + expiresInSeconds * 1000 };
+}
+
+export function currentStepUpTicket(): string | null {
+  if (!stepUpTicket || Date.now() >= stepUpTicket.expiresAt) return null;
+  return stepUpTicket.value;
+}
+
 export const authService = {
+  /** Re-authenticate for a destructive action. A valid session alone is not enough. */
+  stepUp: (password: string, mfaCode?: string): Promise<{ ticket: string; expiresInSeconds: number }> =>
+    api.post(`${V1}/auth/step-up`, { password, ...(mfaCode ? { mfaCode } : {}) }).then((r) => r.data),
+
   login: (email: string, password: string, mfaCode?: string) =>
     api.post(`${V1}/auth/login`, { email, password, ...(mfaCode ? { mfaCode } : {}) }).then((r) => r.data),
 };

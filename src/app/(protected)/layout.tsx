@@ -1,4 +1,5 @@
 import Sidebar from "@/components/sidebar";
+import StepUpDialog from "@/components/step-up-dialog";
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -7,6 +8,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
       <main className="flex-1 ml-[260px] overflow-y-auto">
         {children}
       </main>
+      <StepUpDialog />
     </div>
   );
 }
