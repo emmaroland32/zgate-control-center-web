@@ -393,6 +393,25 @@ export const authService = {
     api.post(`${V1}/auth/login`, { email, password, ...(mfaCode ? { mfaCode } : {}) }).then((r) => r.data),
 };
 
+/**
+ * Single sign-on. The sign-in page asks `status` first so the button only appears where SSO is
+ * actually configured — offering it otherwise sends operators to a dead end.
+ */
+export const ssoService = {
+  status: (): Promise<{ enabled: boolean }> =>
+    api.get(`${V1}/auth/oidc/status`).then((r) => r.data),
+
+  // withCredentials on both: the backend binds the sign-in to a per-browser HttpOnly cookie, and
+  // a cross-origin XHR neither stores nor returns that cookie without it. CORS already allows
+  // credentials against an explicit origin list, so this needs no server change.
+  authorize: (): Promise<{ authorizationUrl: string }> =>
+    api.get(`${V1}/auth/oidc/authorize`, { withCredentials: true }).then((r) => r.data),
+
+  callback: (code: string, state: string) =>
+    api.post(`${V1}/auth/oidc/callback`, { code, state }, { withCredentials: true })
+      .then((r) => r.data),
+};
+
 export type SecurityPolicy = {
   passwordMinLength: number; passwordRequireMixedCase: boolean;
   passwordRequireDigit: boolean; passwordRequireSymbol: boolean;

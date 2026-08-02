@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { authService, apiError } from "@/services/controlcenter.service";
-import { Zap, Lock } from "lucide-react";
+import { authService, ssoService, apiError } from "@/services/controlcenter.service";
+import { Zap, Lock, KeyRound } from "lucide-react";
 
 function LoginForm() {
   const router = useRouter();
@@ -14,6 +14,24 @@ function LoginForm() {
   const [mfaCode, setMfaCode] = useState("");
   const [mfaRequired, setMfaRequired] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [ssoEnabled, setSsoEnabled] = useState(false);
+  const [ssoBusy, setSsoBusy] = useState(false);
+
+  // Only offer SSO where it is actually configured — a button that dead-ends is worse than none.
+  useEffect(() => {
+    ssoService.status().then((r) => setSsoEnabled(r.enabled)).catch(() => setSsoEnabled(false));
+  }, []);
+
+  async function handleSso() {
+    setSsoBusy(true);
+    try {
+      const { authorizationUrl } = await ssoService.authorize();
+      window.location.href = authorizationUrl;
+    } catch (e) {
+      toast.error(apiError(e, "Could not start single sign-on"));
+      setSsoBusy(false);
+    }
+  }
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -99,6 +117,27 @@ function LoginForm() {
         <Lock size={14} />
         {loading ? "Signing in…" : "Sign in to Control Center"}
       </button>
+
+      {ssoEnabled && (
+        <>
+          <div className="flex items-center gap-3 pt-1">
+            <div className="h-px flex-1 bg-white/10" />
+            <span className="text-[11px] uppercase tracking-wider text-controlcenter-500">or</span>
+            <div className="h-px flex-1 bg-white/10" />
+          </div>
+          <button
+            type="button"
+            onClick={handleSso}
+            disabled={ssoBusy}
+            className="w-full flex items-center justify-center gap-2 py-2.5 bg-controlcenter-800
+                       hover:bg-controlcenter-700 disabled:opacity-50 text-white font-medium
+                       rounded-lg border border-white/10 transition-colors text-sm"
+          >
+            <KeyRound size={14} />
+            {ssoBusy ? "Redirecting…" : "Sign in with SSO"}
+          </button>
+        </>
+      )}
     </form>
   );
 }

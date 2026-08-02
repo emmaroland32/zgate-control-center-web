@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login"];
+// The SSO callback runs BEFORE a token exists — the whole point of it is to obtain one. Without
+// it here the middleware bounces the operator back to /login and the code is never exchanged.
+const PUBLIC_PATHS = ["/login", "/sso/callback"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow public paths through
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+  // Exact match or a real sub-path — startsWith alone would also exempt /loginX and
+  // /sso/callback-anything.
+  if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
     return NextResponse.next();
   }
 
