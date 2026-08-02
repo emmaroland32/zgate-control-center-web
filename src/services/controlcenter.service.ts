@@ -368,6 +368,7 @@ export type SecurityPolicy = {
   passwordRequireDigit: boolean; passwordRequireSymbol: boolean;
   lockoutThreshold: number; lockoutBaseMinutes: number; lockoutMaxMinutes: number;
   mfaSecretsEncrypted: boolean;
+  ipAllowlistEnabled: boolean; ipAllowlistEntries: number;
 };
 
 export const securityPolicyService = {

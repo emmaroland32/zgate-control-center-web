@@ -422,10 +422,31 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="card p-4">
-                      <div className="text-sm font-semibold text-slate-800 mb-2">Network restrictions</div>
-                      <p className="text-sm text-slate-600">
-                        IP allowlisting is not enforced by this application — put it on the load balancer
-                        or WAF in front of the console, where it can drop traffic before it reaches Java.
+                      <div className="text-sm font-semibold text-slate-800 mb-2">Operator IP allow-list</div>
+                      {policy.ipAllowlistEnabled ? (
+                        <>
+                          <p className="text-sm text-emerald-700">
+                            Active — {policy.ipAllowlistEntries} entr
+                            {policy.ipAllowlistEntries === 1 ? "y" : "ies"}. The console, including
+                            sign-in, is reachable only from those addresses.
+                          </p>
+                          <p className="text-sm text-slate-600 mt-1">
+                            Machine-to-machine endpoints stay open by design: customer deployments
+                            phone home from arbitrary addresses, and gating those would stop licence
+                            renewal fleet-wide. They are authenticated by service key instead.
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-sm text-slate-600">
+                          Not configured. Set{" "}
+                          <code className="font-mono text-xs">controlcenter.security.ipAllowlist</code>{" "}
+                          to IPv4 addresses and/or CIDR ranges to restrict where operators can reach
+                          this console from. An invalid entry fails the boot rather than silently
+                          narrowing the list.
+                        </p>
+                      )}
+                      <p className="text-[11px] text-slate-400 mt-2 font-mono">
+                        controlcenter.security.ipAllowlist
                       </p>
                     </div>
                   </div>
