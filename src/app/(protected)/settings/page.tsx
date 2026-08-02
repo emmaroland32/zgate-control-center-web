@@ -222,14 +222,8 @@ export default function SettingsPage() {
     try {
       const flat: Record<string, string> = {
         ...general,
-        sessionTimeout: security.sessionTimeout,
-        mfaEnforced: String(security.mfaEnforced),
-        ipAllowlist: security.ipAllowlist,
-        passwordMinLength: security.passwordMinLength,
-        requireUppercase: String(security.requireUppercase),
-        requireNumbers: String(security.requireNumbers),
-        requireSymbols: String(security.requireSymbols),
-        loginLockoutThreshold: security.loginLockoutThreshold,
+        // Security settings are SERVER-enforced (controlcenter.auth.*) and shown read-only on that
+        // tab; writing them here persisted keys nothing reads.
         emailLicenseExpiry: String(notifications.emailLicenseExpiry),
         emailDeploymentFailure: String(notifications.emailDeploymentFailure),
         emailHealthAlerts: String(notifications.emailHealthAlerts),
@@ -239,6 +233,8 @@ export default function SettingsPage() {
         defaultExpiryMonths: licensing.defaultExpiryMonths,
         gracePeriodDays: licensing.gracePeriodDays,
         registryUrl: registry.registryUrl,
+        // Was collected in the form and omitted from the payload — silently discarded.
+        registryPassword: registry.registryPassword,
         registryUsername: registry.registryUsername,
         pullPolicy: registry.pullPolicy,
         mirrorUrl: registry.mirrorUrl,
@@ -325,6 +321,11 @@ export default function SettingsPage() {
             {/* ── GENERAL ──────────────────────────────────────────────── */}
             {tab === "general" && (
               <div className="space-y-5">
+
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  These values are stored in Control Center configuration but are not yet read by the
+                  server — they do not change behaviour. Treat them as notes until wired.
+                </div>
                 <div>
                   <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
                     <Globe size={15} className="text-controlcenter-500" />
@@ -434,6 +435,11 @@ export default function SettingsPage() {
 
             {tab === "notifications" && (
               <div className="space-y-5">
+
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  These values are stored in Control Center configuration but are not yet read by the
+                  server — they do not change behaviour. Treat them as notes until wired.
+                </div>
                 <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
                   <Bell size={15} className="text-controlcenter-500" />
                   Notification Settings
@@ -504,6 +510,11 @@ export default function SettingsPage() {
             {/* ── LICENSING ─────────────────────────────────────────────── */}
             {tab === "licensing" && (
               <div className="space-y-5">
+
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  These values are stored in Control Center configuration but are not yet read by the
+                  server — they do not change behaviour. Treat them as notes until wired.
+                </div>
                 <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
                   <Key size={15} className="text-controlcenter-500" />
                   Licensing Settings
@@ -566,6 +577,11 @@ export default function SettingsPage() {
             {/* ── DOCKER REGISTRY ───────────────────────────────────────── */}
             {tab === "registry" && (
               <div className="space-y-5">
+
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  These values are stored in Control Center configuration but are not yet read by the
+                  server — they do not change behaviour. Treat them as notes until wired.
+                </div>
                 <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
                   <Package size={15} className="text-controlcenter-500" />
                   Docker Registry Settings

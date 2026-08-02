@@ -38,7 +38,7 @@ const EMPTY_STATS: ControlCenterDashboardStats = {
 
 function deploymentHealthStatus(h: ServiceHealth): "HEALTHY" | "DEGRADED" | "OFFLINE" {
   if (h.backendStatus === "DOWN") return "OFFLINE";
-  if (h.backendStatus === "DEGRADED" || h.databaseStatus === "DEGRADED" || h.redisStatus === "DEGRADED") return "DEGRADED";
+  if (h.backendStatus === "DEGRADED") return "DEGRADED";
   return "HEALTHY";
 }
 
@@ -210,9 +210,6 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h1 className="text-lg font-bold text-slate-900">Dashboard</h1>
-            <span className="badge badge-red text-[10px] px-2 py-0.5 font-semibold tracking-wide uppercase">
-              Production
-            </span>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-xs text-slate-400">
@@ -380,22 +377,21 @@ export default function DashboardPage() {
                   : (health.length > 0 ? health : []).map((h) => {
                     const status = deploymentHealthStatus(h);
                     const dotColor = status === "HEALTHY" ? "bg-emerald-500" : status === "DEGRADED" ? "bg-amber-500" : "bg-red-500";
-                    const uptimePct = h.uptimeHours > 0
-                      ? Math.min(100, ((h.uptimeHours) / (h.uptimeHours + 0.1) * 100)).toFixed(1)
-                      : "0.0";
+                    // Uptime is not measured here — the SLA screen computes it from recorded
+                    // outages. This tile shows the last heartbeat instead of a fabricated 100%.
                     return (
                       <div key={h.organizationId} className="px-5 py-3 flex items-center gap-3 hover:bg-slate-50/70 transition-colors">
                         <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${dotColor} ${status === "OFFLINE" ? "" : "ring-2 ring-offset-1 " + (status === "HEALTHY" ? "ring-emerald-200" : "ring-amber-200")}`} />
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium text-slate-800 truncate">{h.organizationName}</div>
                           <div className="text-xs text-slate-400">
-                            v{h.version} &bull; {h.activeUsers} users &bull; {h.responseTimeMs > 0 ? `${h.responseTimeMs}ms` : "unreachable"}
+                            v{h.version} &bull; {h.activeUsers} users
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-                          <div className="text-xs font-medium text-slate-700">{uptimePct}%</div>
+                          <div className="text-xs font-medium text-slate-700">{status}</div>
                           <div className="text-[10px] text-slate-400">
-                            {timeAgo(h.lastChecked)}
+                            {h.lastChecked ? timeAgo(h.lastChecked) : "never seen"}
                           </div>
                         </div>
                       </div>
@@ -550,7 +546,7 @@ export default function DashboardPage() {
               </h2>
               <div className="grid grid-cols-2 gap-2">
                 <a
-                  href="/licenses/issue"
+                  href="/licenses"
                   className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-slate-200
                              hover:border-controlcenter-300 hover:bg-controlcenter-50 transition-all group text-center"
                 >
@@ -560,7 +556,7 @@ export default function DashboardPage() {
                   <span className="text-xs font-medium text-slate-700">Issue License</span>
                 </a>
                 <a
-                  href="/releases/new"
+                  href="/releases"
                   className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-slate-200
                              hover:border-emerald-300 hover:bg-emerald-50 transition-all group text-center"
                 >
@@ -570,7 +566,7 @@ export default function DashboardPage() {
                   <span className="text-xs font-medium text-slate-700">Push Release</span>
                 </a>
                 <a
-                  href="/organizations/new"
+                  href="/organizations"
                   className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-slate-200
                              hover:border-blue-300 hover:bg-blue-50 transition-all group text-center"
                 >
@@ -610,8 +606,12 @@ export default function DashboardPage() {
                       v{s.latestReleaseVersion}
                     </div>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="badge badge-green">STABLE</span>
-                      <span className="text-xs text-slate-400">{formatDate(new Date())}</span>
+                      {s.latestReleaseChannel && (
+                        <span className="badge badge-green">{s.latestReleaseChannel}</span>
+                      )}
+                      <span className="text-xs text-slate-400">
+                        {s.latestReleasePublishedAt ? formatDate(s.latestReleasePublishedAt) : "—"}
+                      </span>
                     </div>
                   </div>
                   <a

@@ -389,9 +389,6 @@ export default function ReleasesPage() {
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>("ALL");
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const [viewRelease, setViewRelease] = useState<SoftwareRelease | null>(null);
-  const [channelPins, setChannelPins] = useState<Record<ReleaseChannel, boolean>>({
-    STABLE: false, LTS: true, BETA: false, HOTFIX: false,
-  });
 
   const load = async () => {
     setLoading(true);
@@ -440,10 +437,6 @@ export default function ReleasesPage() {
     window.location.assign("/deployments");
   };
 
-  const togglePin = (channel: ReleaseChannel) => {
-    setChannelPins((p) => ({ ...p, [channel]: !p[channel] }));
-    toast.success(`Channel ${channel} ${channelPins[channel] ? "unpinned" : "pinned"}.`);
-  };
 
   return (
     <div className="p-6 space-y-6">
@@ -683,10 +676,9 @@ export default function ReleasesPage() {
                 const latest = channelReleases.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())[0];
                 const info = {
                   version: latest?.version ?? "—",
-                  deployments: channelReleases.length,
+                  releaseCount: channelReleases.length,
                   lastUpdated: latest?.publishedAt ?? "",
                 };
-                const pinned = channelPins[channel];
 
                 const borderColor = {
                   STABLE: "border-emerald-200",
@@ -721,9 +713,6 @@ export default function ReleasesPage() {
                           <div className="text-xs text-slate-500 mt-0.5">{meta.description}</div>
                         </div>
                       </div>
-                      {pinned && (
-                        <span className="badge badge-blue text-[10px]">Pinned</span>
-                      )}
                     </div>
 
                     <div className="space-y-2 mb-4">
@@ -732,27 +721,14 @@ export default function ReleasesPage() {
                         <span className="font-mono text-sm font-bold text-slate-900">v{info.version}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-slate-500">Deployments on Channel</span>
-                        <span className="text-sm font-semibold text-slate-700">{info.deployments}</span>
+                        <span className="text-xs text-slate-500">Releases on Channel</span>
+                        <span className="text-sm font-semibold text-slate-700">{info.releaseCount}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-slate-500">Last Updated</span>
                         <span className="text-xs text-slate-600">{formatDateTime(info.lastUpdated)}</span>
                       </div>
                     </div>
-
-                    <button
-                      onClick={() => togglePin(channel)}
-                      className={cn(
-                        "w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-colors",
-                        pinned
-                          ? "bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
-                          : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200"
-                      )}
-                    >
-                      <Shield size={12} />
-                      {pinned ? "Unpin Channel" : "Pin Channel"}
-                    </button>
                   </div>
                 );
               })}

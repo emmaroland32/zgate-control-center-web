@@ -36,11 +36,6 @@ import type { DatabaseHealth, DatabaseBackup, FlywayMigration, SchemaInfo, Organ
 
 
 // ─── SQL preview content (static UI reference) ─────────────────────────────────
-const SQL_CONTENT: Record<string, string> = {
-  "V2_5_0__portfolio_rebalancing.sql": `-- V2.5.0 Portfolio Rebalancing\n-- Adds rebalancing trigger columns and audit tables\n\nALTER TABLE zgate_portfolio.portfolios\n  ADD COLUMN IF NOT EXISTS rebalance_trigger VARCHAR(20) DEFAULT 'MANUAL',\n  ADD COLUMN IF NOT EXISTS rebalance_threshold DECIMAL(5,4) DEFAULT 0.05,\n  ADD COLUMN IF NOT EXISTS last_rebalanced_at TIMESTAMPTZ;\n\nCREATE TABLE IF NOT EXISTS zgate_portfolio.rebalancing_jobs (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  portfolio_id UUID NOT NULL REFERENCES zgate_portfolio.portfolios(id),\n  triggered_by VARCHAR(50) NOT NULL,\n  status VARCHAR(20) NOT NULL DEFAULT 'PENDING',\n  started_at TIMESTAMPTZ,\n  completed_at TIMESTAMPTZ,\n  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\nCREATE INDEX idx_rebalancing_jobs_portfolio_id\n  ON zgate_portfolio.rebalancing_jobs(portfolio_id);\nCREATE INDEX idx_rebalancing_jobs_status\n  ON zgate_portfolio.rebalancing_jobs(status);`,
-  "V2_5_1__mutual_fund_distribution_audit.sql": `-- V2.5.1 Mutual Fund Distribution Audit\n-- Adds audit trail for distribution events\n\nCREATE TABLE IF NOT EXISTS zgate_mutual_fund.distribution_audit (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  fund_id UUID NOT NULL,\n  distribution_id UUID NOT NULL,\n  action VARCHAR(50) NOT NULL,\n  performed_by VARCHAR(255) NOT NULL,\n  performed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n  details JSONB\n);\n\nCREATE INDEX idx_dist_audit_fund_id\n  ON zgate_mutual_fund.distribution_audit(fund_id);\nCREATE INDEX idx_dist_audit_action\n  ON zgate_mutual_fund.distribution_audit(action);`,
-  "V2_5_2__trade_schema_patch.sql": `-- V2.5.2 Trade Schema Patch\n-- Fixes missing settlement columns from failed V2.4.3\n\nALTER TABLE zgate_trade.orders\n  ADD COLUMN IF NOT EXISTS settlement_date DATE,\n  ADD COLUMN IF NOT EXISTS settlement_currency VARCHAR(3),\n  ADD COLUMN IF NOT EXISTS settlement_amount DECIMAL(20,6);\n\nALTER TABLE zgate_trade.executions\n  ADD COLUMN IF NOT EXISTS clearing_house VARCHAR(100),\n  ADD COLUMN IF NOT EXISTS clearing_reference VARCHAR(50);`,
-};
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 function formatBytes(bytes: number): string {
@@ -80,14 +75,6 @@ function BackupStatusBadge({ status }: { status: DatabaseBackup["status"] }) {
   return <span className="badge badge-red">Failed</span>;
 }
 
-function BackupTypeBadge({ type }: { type: DatabaseBackup["type"] }) {
-  const cfg: Record<DatabaseBackup["type"], string> = {
-    FULL: "badge badge-blue",
-    INCREMENTAL: "badge badge-gray",
-    SCHEMA_ONLY: "badge badge-purple",
-  };
-  return <span className={cfg[type]}>{type.replace("_", " ")}</span>;
-}
 
 // ─── Loading skeleton ──────────────────────────────────────────────────────────
 function Skeleton({ className }: { className?: string }) {
@@ -104,6 +91,8 @@ export default function DatabasePage() {
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
   const [activeTab, setActiveTab] = useState<Tab>("health");
   const [loading, setLoading] = useState(true);
+  const [backupInfo, setBackupInfo] = useState<{ available: boolean; restoreEnabled: boolean; unavailableReason: string }>(
+    { available: false, restoreEnabled: false, unavailableReason: "" });
   const [health, setHealth] = useState<DatabaseHealth | null>(null);
 
   // Migrations
@@ -146,11 +135,14 @@ export default function DatabasePage() {
       ]);
       setHealth(h);
       setMigrations(m as (FlywayMigration & { schema: string })[]);
-      setBackups(b);
-    } catch {
+      setBackups(b?.backups ?? []);
+      setBackupInfo({ available: !!b?.available, restoreEnabled: !!b?.restoreEnabled,
+                      unavailableReason: b?.unavailableReason ?? "" });
+    } catch (e) {
       setHealth(null);
       setMigrations([]);
       setBackups([]);
+      toast.error(apiError(e, "Could not load database status"));
     } finally {
       setLoading(false);
     }
@@ -173,7 +165,7 @@ export default function DatabasePage() {
     setRunningMigration(true);
     try {
       await databaseService.runMigrations();
-    } catch { /* fallback */ }
+    } catch (e) { toast.error(apiError(e)); }
     finally {
       setRunningMigration(false);
     }
@@ -181,7 +173,7 @@ export default function DatabasePage() {
     try {
       const m = await databaseService.getMigrations();
       setMigrations(m as (FlywayMigration & { schema: string })[]);
-    } catch { /* keep current state */ }
+    } catch (e) { toast.error(apiError(e)); }
   };
 
   const handleCreateBackup = async () => {
@@ -189,9 +181,7 @@ export default function DatabasePage() {
     try {
       const result = await databaseService.createBackup(backupNote || backupType);
       setBackups((prev) => [result, ...prev]);
-    } catch {
-      /* backend unavailable */
-    } finally {
+    } catch (e) { toast.error(apiError(e)); } finally {
       setCreatingBackup(false);
       setShowCreateBackup(false);
       setBackupNote("");
@@ -241,10 +231,26 @@ export default function DatabasePage() {
     }
   };
 
-  const handleRestoreConfirm = () => {
-    if (restoreConfirmText !== "RESTORE") return;
-    setRestoreTarget(null);
-    setRestoreConfirmText("");
+  const [restoring, setRestoring] = useState(false);
+
+  /**
+   * Actually restores. This handler used to just close the modal — an operator typed the
+   * confirmation, clicked the button, and nothing happened at all while it read as a completed
+   * restore of the control-plane database.
+   */
+  const handleRestoreConfirm = async () => {
+    if (!restoreTarget || restoreConfirmText !== "RESTORE") return;
+    setRestoring(true);
+    try {
+      await databaseService.restoreBackup(restoreTarget.id);
+      setRestoreTarget(null);
+      setRestoreConfirmText("");
+      await fetchData();
+    } catch (e) {
+      toast.error(apiError(e, "Restore failed"));
+    } finally {
+      setRestoring(false);
+    }
   };
 
   // Computed
@@ -650,10 +656,6 @@ export default function DatabasePage() {
                 <Play size={12} className={runningMigration ? "animate-spin" : ""} />
                 Run Pending
               </button>
-              <button className="btn-secondary text-xs px-3 py-1.5">
-                <Wrench size={12} />
-                Repair
-              </button>
             </div>
           </div>
 
@@ -738,7 +740,9 @@ export default function DatabasePage() {
                 </button>
               </div>
               <pre className="bg-slate-950 text-emerald-400 text-xs p-5 overflow-x-auto leading-relaxed font-mono">
-                {SQL_CONTENT[sqlPanelScript] ?? "-- SQL content not available for this migration."}
+                {"-- Migration SQL is not served by the API.\n" +
+                  "-- Flyway applies these from the application image; read them in the repository at\n" +
+                  "-- backend/src/main/resources/db/migration/" + (sqlPanelScript || "")}
               </pre>
             </div>
           )}
@@ -756,8 +760,8 @@ export default function DatabasePage() {
               { label: "Total Backups", value: backups.length.toString() },
               {
                 label: "Last Backup",
-                value: backups.filter((b) => b.status === "SUCCESS")[0]?.completedAt
-                  ? timeAgo(backups.filter((b) => b.status === "SUCCESS")[0].completedAt!)
+                value: backups.filter((b) => b.status === "COMPLETED")[0]?.completedAt
+                  ? timeAgo(backups.filter((b) => b.status === "COMPLETED")[0].completedAt!)
                   : "Never",
               },
               {
@@ -767,8 +771,8 @@ export default function DatabasePage() {
               {
                 label: "Oldest Backup",
                 value: (() => {
-                  const sorted = [...backups].filter((b) => b.status === "SUCCESS").sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
-                  return sorted[0] ? formatDateTime(sorted[0].startedAt) : "—";
+                  const sorted = [...backups].filter((b) => b.status === "COMPLETED").sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+                  return sorted[0] ? formatDateTime(sorted[0].createdAt) : "—";
                 })(),
               },
             ].map(({ label, value }) => (
@@ -871,46 +875,31 @@ export default function DatabasePage() {
                   <th>Started</th>
                   <th>Duration</th>
                   <th>Size</th>
-                  <th>Triggered By</th>
-                  <th>Note</th>
-                  <th>Expires</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {backups.map((b) => {
-                  const duration = b.completedAt && b.startedAt
-                    ? Math.round((new Date(b.completedAt).getTime() - new Date(b.startedAt).getTime()) / 1000)
+                  const duration = b.completedAt && b.createdAt
+                    ? Math.round((new Date(b.completedAt).getTime() - new Date(b.createdAt).getTime()) / 1000)
                     : null;
-
-                  const expiresIn7Days = b.expiresAt &&
-                    new Date(b.expiresAt).getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000;
 
                   return (
                     <tr key={b.id}>
                       <td><BackupStatusBadge status={b.status} /></td>
-                      <td><BackupTypeBadge type={b.type} /></td>
-                      <td className="text-xs">{formatDateTime(b.startedAt)}</td>
+                      <td className="text-xs">{formatDateTime(b.createdAt)}</td>
                       <td className="text-xs text-slate-500">
                         {duration !== null ? `${duration}s` : "—"}
                       </td>
                       <td className="text-xs text-slate-500">
                         {b.sizeBytes ? formatBytes(b.sizeBytes) : "—"}
                       </td>
-                      <td className="text-xs text-slate-500">{b.triggeredBy}</td>
-                      <td className="text-xs text-slate-400">{b.note ?? "—"}</td>
-                      <td>
-                        {b.expiresAt ? (
-                          <span className={`text-xs font-medium ${expiresIn7Days ? "text-amber-600" : "text-slate-500"}`}>
-                            {formatDateTime(b.expiresAt)}
-                          </span>
-                        ) : "—"}
-                      </td>
                       <td>
                         <div className="flex items-center gap-2">
-                          {b.status === "SUCCESS" && (
+                          {b.status === "COMPLETED" && (
                             <>
                               <button
+                                onClick={() => window.open(databaseService.downloadBackupUrl(b.id), "_blank")}
                                 className="text-slate-400 hover:text-controlcenter-600 transition-colors"
                                 title="Download"
                               >
@@ -1031,7 +1020,7 @@ export default function DatabasePage() {
                 <h3 className="text-base font-bold text-slate-900">Restore Database</h3>
                 <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                   This will replace <strong>all data</strong> in the database with the backup from{" "}
-                  <strong>{formatDateTime(restoreTarget.startedAt)}</strong>.
+                  <strong>{formatDateTime(restoreTarget.createdAt)}</strong>.
                   This action <strong>cannot be undone</strong>.
                 </p>
               </div>
@@ -1057,11 +1046,13 @@ export default function DatabasePage() {
               </button>
               <button
                 className="btn-danger"
-                disabled={restoreConfirmText !== "RESTORE"}
+                disabled={restoreConfirmText !== "RESTORE" || restoring || !backupInfo.restoreEnabled}
+                title={backupInfo.restoreEnabled ? undefined
+                  : "Restore is disabled on the server (controlcenter.database.backup.restoreEnabled)"}
                 onClick={handleRestoreConfirm}
               >
                 <RotateCcw size={14} />
-                Restore Database
+                {restoring ? "Restoring…" : "Restore Database"}
               </button>
             </div>
           </div>

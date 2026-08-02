@@ -417,9 +417,7 @@ export default function AuditPage() {
                 let parsedDetails: Record<string, unknown> | null = null;
                 try {
                   if (entry.details) parsedDetails = JSON.parse(entry.details);
-                } catch {
-                  /* ignore */
-                }
+                } catch { /* details is free text, not JSON — render it raw below */ }
 
                 return (
                   <React.Fragment key={entry.id}>

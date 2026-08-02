@@ -8,7 +8,7 @@ import {
   Play, X, Copy, Database, Globe, GitCompareArrows, PlugZap, Server,
 } from "lucide-react";
 import {
-  provisioningService, organizationService,
+  provisioningService, organizationService, apiError,
   type CloudCredential, type InfrastructureStack, type ProvisioningRun,
   type ProvisioningReadiness, type ProvisioningTarget, type CloudAuthMode,
   type SshCheckResult,
@@ -156,9 +156,7 @@ function CredentialDialog({ orgs, onClose, onSaved }: {
       // their trust policy — show it before the dialog closes.
       if (saved.awsExternalId && authMode === "AWS_ASSUME_ROLE") setCreated(saved);
       else { onSaved(); onClose(); }
-    } catch {
-      /* interceptor toasts the backend message */
-    } finally {
+    } catch (e) { toast.error(apiError(e)); } finally {
       setSaving(false);
     }
   };
@@ -476,9 +474,7 @@ function ProvisionDialog({ orgs, credentials, onClose, onStarted }: {
       });
       onStarted(stack);
       onClose();
-    } catch {
-      /* interceptor toasts the backend message */
-    } finally {
+    } catch (e) { toast.error(apiError(e)); } finally {
       setSubmitting(false);
     }
   };
@@ -733,9 +729,7 @@ function DestroyDialog({ stack, org, onClose, onDestroyed }: {
     try {
       onDestroyed(await provisioningService.destroy(stack.id, typed));
       onClose();
-    } catch {
-      /* interceptor toasts the backend message */
-    } finally {
+    } catch (e) { toast.error(apiError(e)); } finally {
       setBusy(false);
     }
   };
@@ -834,14 +828,14 @@ export default function ProvisioningPage() {
       const run = await provisioningService.apply(stack.id);
       setActiveRunId(run.id);
       load();
-    } catch { /* interceptor toasts */ }
+    } catch (e) { toast.error(apiError(e)); }
   };
 
   const refresh = async (stack: InfrastructureStack) => {
     try {
       const run = await provisioningService.refresh(stack.id);
       setActiveRunId(run.id);
-    } catch { /* interceptor toasts */ }
+    } catch (e) { toast.error(apiError(e)); }
   };
 
   return (

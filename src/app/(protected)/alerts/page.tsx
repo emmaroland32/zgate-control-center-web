@@ -22,8 +22,13 @@ import {
   Database,
   Mail,
   Zap,
+  ServerCrash,
+  KeyRound,
+  MemoryStick,
 } from "lucide-react";
-import { alertService } from "@/services/controlcenter.service";
+import type { LucideIcon } from "lucide-react";
+import { alertService, apiError } from "@/services/controlcenter.service";
+import { toast } from "sonner";
 import { timeAgo, formatDateTime, getCurrentUserEmail } from "@/lib/utils";
 import type { AlertRule, ActiveAlert, AlertSeverity, AlertStatus, AlertCondition } from "@/types";
 
@@ -31,32 +36,39 @@ import type { AlertRule, ActiveAlert, AlertSeverity, AlertStatus, AlertCondition
 
 type AlertTab = "active" | "rules" | "history";
 
+/**
+ * A resolved alert as the backend actually stores it. The previous shape invented
+ * durationMinutes / rootCause / resolvedBy, none of which exist on the Alert entity — rendering
+ * them threw as soon as one alert existed. Duration is derived from the two timestamps.
+ */
 interface HistoricalAlert {
   id: string;
   ruleName: string;
   severity: AlertSeverity;
   organizationName: string;
   firedAt: string;
-  resolvedAt: string;
-  durationMinutes: number;
-  rootCause: string;
-  resolvedBy: string;
+  resolvedAt?: string | null;
+  message?: string | null;
+  acknowledgedBy?: string | null;
 }
 
-type AlertChannel = "EMAIL" | "SLACK" | "WEBHOOK" | "PAGERDUTY";
+/** Only the channels AlertDispatchService actually delivers. */
+type AlertChannel = "EMAIL" | "WEBHOOK";
 type AlertOperator = "gt" | "lt" | "gte" | "lte" | "eq" | "neq";
 
 // ─── Metric config ─────────────────────────────────────────────────────────────
 
 const METRICS = [
-  { value: "response_time_ms", label: "response_time_ms", description: "Backend API response time", unit: "ms", defaultThreshold: 500 },
-  { value: "disk_usage_percent", label: "disk_usage_percent", description: "Server disk usage percentage", unit: "%", defaultThreshold: 85 },
-  { value: "memory_usage_percent", label: "memory_usage_percent", description: "Container memory usage", unit: "%", defaultThreshold: 90 },
-  { value: "cpu_usage_percent", label: "cpu_usage_percent", description: "Container CPU usage", unit: "%", defaultThreshold: 80 },
-  { value: "license_expiry_days", label: "license_expiry_days", description: "Days until license expires", unit: "days", defaultThreshold: 14 },
-  { value: "deployment_failure", label: "deployment_failure", description: "Deployment job failure", unit: "", defaultThreshold: 1 },
-  { value: "db_connection_count", label: "db_connection_count", description: "Active DB connections", unit: "conns", defaultThreshold: 22 },
-  { value: "error_rate_percent", label: "error_rate_percent", description: "Backend error rate (5xx)", unit: "%", defaultThreshold: 5 },
+  { value: "offline_deployments", label: "offline_deployments", description: "Customer deployments currently OFFLINE", unit: "orgs", defaultThreshold: 1 },
+  { value: "degraded_deployments", label: "degraded_deployments", description: "Customer deployments currently DEGRADED", unit: "orgs", defaultThreshold: 1 },
+  { value: "unacknowledged_errors", label: "unacknowledged_errors", description: "Unacknowledged ERROR telemetry events", unit: "events", defaultThreshold: 10 },
+  { value: "expiring_licenses", label: "expiring_licenses", description: "Licences expiring within 30 days", unit: "licences", defaultThreshold: 1 },
+  { value: "cpu_usage_percent", label: "cpu_usage_percent", description: "Highest CPU across reporting nodes", unit: "%", defaultThreshold: 80 },
+  { value: "memory_usage_percent", label: "memory_usage_percent", description: "Highest memory across reporting nodes", unit: "%", defaultThreshold: 90 },
+  { value: "license_expiry_days", label: "license_expiry_days", description: "Days until the soonest licence expiry", unit: "days", defaultThreshold: 14 },
+  { value: "deployment_failure", label: "deployment_failure", description: "Deployments in FAILED state", unit: "count", defaultThreshold: 1 },
+  { value: "error_rate_percent", label: "error_rate_percent", description: "Share of recent telemetry at ERROR level", unit: "%", defaultThreshold: 5 },
+  { value: "drifted_stacks", label: "drifted_stacks", description: "Stacks changed outside Control Center", unit: "stacks", defaultThreshold: 1 },
 ];
 
 const OPERATORS: { value: AlertOperator; label: string }[] = [
@@ -68,7 +80,7 @@ const OPERATORS: { value: AlertOperator; label: string }[] = [
   { value: "neq", label: "!=" },
 ];
 
-const CHANNELS: AlertChannel[] = ["EMAIL", "SLACK", "WEBHOOK", "PAGERDUTY"];
+const CHANNELS: AlertChannel[] = ["EMAIL", "WEBHOOK"];
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -95,7 +107,8 @@ function conditionSummary(c: AlertCondition): string {
   return `${c.metric} ${op} ${c.threshold}${window}`;
 }
 
-function durationStr(minutes: number): string {
+function durationStr(minutes?: number): string {
+  if (minutes == null || Number.isNaN(minutes)) return "—";
   if (minutes < 60) return `${minutes}m`;
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
@@ -103,10 +116,8 @@ function durationStr(minutes: number): string {
 }
 
 const CHANNEL_ICONS: Record<AlertChannel, React.ReactNode> = {
-  EMAIL:     <Mail size={11} />,
-  SLACK:     <Zap size={11} />,
-  WEBHOOK:   <Activity size={11} />,
-  PAGERDUTY: <AlertOctagon size={11} />,
+  EMAIL:   <Mail size={11} />,
+  WEBHOOK: <Zap size={11} />,
 };
 
 // ─── New Rule Form state ───────────────────────────────────────────────────────
@@ -129,11 +140,11 @@ const DEFAULT_FORM: NewRuleForm = {
   name: "",
   description: "",
   severity: "HIGH",
-  metric: "response_time_ms",
+  metric: "offline_deployments",
   operator: "gt",
-  threshold: 500,
+  threshold: 1,
   windowMinutes: 5,
-  channels: new Set(["EMAIL", "SLACK"]),
+  channels: new Set<AlertChannel>(["EMAIL"]),
   orgScope: "all",
   cooldownMinutes: 15,
   enabled: true,
@@ -141,30 +152,25 @@ const DEFAULT_FORM: NewRuleForm = {
 
 // ─── Quick-add templates ────────────────────────────────────────────────────────
 
-const QUICK_TEMPLATES: { label: string; icon: React.ElementType; patch: Partial<NewRuleForm> }[] = [
-  {
-    label: "High Response Time",
-    icon: Activity,
-    patch: { name: "High Response Time", severity: "CRITICAL", metric: "response_time_ms", operator: "gt", threshold: 500, windowMinutes: 5 },
-  },
-  {
-    label: "Disk Full",
-    icon: HardDrive,
-    patch: { name: "Disk Usage Critical", severity: "HIGH", metric: "disk_usage_percent", operator: "gt", threshold: 85, windowMinutes: 5 },
-  },
-  {
-    label: "License Expiring",
-    icon: Shield,
-    patch: { name: "License Expiring Soon", severity: "MEDIUM", metric: "license_expiry_days", operator: "lt", threshold: 14 },
-  },
-  {
-    label: "Deployment Failed",
-    icon: XCircle,
-    patch: { name: "Deployment Failure", severity: "CRITICAL", metric: "deployment_failure", operator: "eq", threshold: 1, windowMinutes: 1 },
-  },
+const QUICK_TEMPLATES: { label: string; icon: LucideIcon; patch: Partial<NewRuleForm> }[] = [
+  { label: "Any deployment offline", icon: ServerCrash,
+    patch: { name: "Deployment offline", metric: "offline_deployments", operator: "gte", threshold: 1, severity: "CRITICAL" } },
+  { label: "Licence expiring soon", icon: KeyRound,
+    patch: { name: "Licence expiring", metric: "license_expiry_days", operator: "lte", threshold: 14, severity: "HIGH" } },
+  { label: "Memory above 90%", icon: MemoryStick,
+    patch: { name: "High memory", metric: "memory_usage_percent", operator: "gt", threshold: 90, severity: "HIGH" } },
+  { label: "Error rate above 5%", icon: AlertTriangle,
+    patch: { name: "High error rate", metric: "error_rate_percent", operator: "gt", threshold: 5, severity: "MEDIUM" } },
 ];
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
+
+/** Alerts store firedAt/resolvedAt, not a duration; derive it rather than render NaN. */
+function minutesBetween(from?: string | null, to?: string | null): number | undefined {
+  if (!from || !to) return undefined;
+  const ms = new Date(to).getTime() - new Date(from).getTime();
+  return ms >= 0 ? Math.round(ms / 60000) : undefined;
+}
 
 export default function AlertsPage() {
   const [activeAlerts, setActiveAlerts] = useState<ActiveAlert[]>([]);
@@ -173,6 +179,7 @@ export default function AlertsPage() {
 
   const [tab, setTab] = useState<AlertTab>("active");
   const [showNewRuleDialog, setShowNewRuleDialog] = useState(false);
+  const [editingRule, setEditingRule] = useState<AlertRule | null>(null);
   const [form, setForm] = useState<NewRuleForm>({ ...DEFAULT_FORM, channels: new Set(DEFAULT_FORM.channels) });
 
   // History filters
@@ -200,9 +207,9 @@ export default function AlertsPage() {
   const highCount = activeAlerts.filter((a) => a.severity === "HIGH" && a.status === "FIRING").length;
   const acknowledgedCount = activeAlerts.filter((a) => a.status === "ACKNOWLEDGED").length;
   const resolvedTodayCount = history.filter((h) => {
+    if (!h.resolvedAt) return false;
     const d = new Date(h.resolvedAt);
-    const today = new Date();
-    return d.toDateString() === today.toDateString();
+    return d.toDateString() === new Date().toDateString();
   }).length;
 
   // Actions
@@ -213,24 +220,24 @@ export default function AlertsPage() {
         : a
       )
     );
-    alertService.acknowledge(id).catch(() => {});
+    alertService.acknowledge(id).catch((e) => toast.error(apiError(e)));
   }
 
   function resolveAlert(id: string) {
     setActiveAlerts((prev) => prev.filter((a) => a.id !== id));
-    alertService.resolve(id).catch(() => {});
+    alertService.resolve(id).catch((e) => toast.error(apiError(e)));
   }
 
   function toggleRule(id: string) {
     setRules((prev) =>
       prev.map((r) => r.id === id ? { ...r, enabled: !r.enabled } : r)
     );
-    alertService.toggleRule(id).catch(() => {});
+    alertService.toggleRule(id).catch((e) => toast.error(apiError(e)));
   }
 
   function deleteRule(id: string) {
     setRules((prev) => prev.filter((r) => r.id !== id));
-    alertService.deleteRule(id).catch(() => {});
+    alertService.deleteRule(id).catch((e) => toast.error(apiError(e)));
   }
 
   // Form helpers
@@ -256,31 +263,37 @@ export default function AlertsPage() {
     });
   }
 
-  function submitRule(e: React.FormEvent) {
+  async function submitRule(e: React.FormEvent) {
     e.preventDefault();
-    const newRule: AlertRule = {
-      id: `rule-${Date.now()}`,
+    // Flat fields with a server-assigned id: the old payload sent `id: "rule-<ts>"` (the column is
+    // a UUID), a nested `condition` object against flat columns, and `channels` as an array against
+    // a String column — a guaranteed 400 that the UI then swallowed and rendered as success.
+    const payload = {
       name: form.name,
       description: form.description,
       enabled: form.enabled,
       severity: form.severity,
-      condition: {
-        metric: form.metric,
-        operator: form.operator,
-        threshold: form.threshold,
-        windowMinutes: form.windowMinutes || undefined,
-      },
-      channels: Array.from(form.channels) as any,
+      metric: form.metric,
+      operator: form.operator,
+      threshold: form.threshold,
+      evaluationWindowMinutes: form.windowMinutes || undefined,
       cooldownMinutes: form.cooldownMinutes,
-      organizationIds: form.orgScope === "all" ? undefined : [],
-      createdAt: new Date().toISOString(),
-      lastTriggered: undefined,
-      triggerCount: 0,
+      channels: JSON.stringify(Array.from(form.channels)),
+      orgScope: form.orgScope === "all" ? "ALL" : "SPECIFIC",
     };
-    alertService.createRule(newRule).catch(() => {});
-    setRules((prev) => [...prev, newRule]);
-    setShowNewRuleDialog(false);
-    setForm({ ...DEFAULT_FORM, channels: new Set(DEFAULT_FORM.channels) });
+    try {
+      const saved = editingRule
+        ? await alertService.updateRule(editingRule.id, payload)
+        : await alertService.createRule(payload);
+      setRules((prev) => editingRule
+        ? prev.map((r) => (r.id === editingRule.id ? saved : r))
+        : [...prev, saved]);
+      setShowNewRuleDialog(false);
+      setEditingRule(null);
+      setForm({ ...DEFAULT_FORM, channels: new Set(DEFAULT_FORM.channels) });
+    } catch (err) {
+      toast.error(apiError(err, "Could not save the alert rule"));
+    }
   }
 
   // Filtered history
@@ -643,6 +656,27 @@ export default function AlertsPage() {
                       <td>
                         <div className="flex items-center gap-1">
                           <button
+                            onClick={() => {
+                              // PUT /alerts/rules/{id} and alertService.updateRule both existed;
+                              // this button simply had no handler.
+                              setEditingRule(rule);
+                              setForm({
+                                name: rule.name,
+                                description: rule.description ?? "",
+                                enabled: rule.enabled,
+                                severity: rule.severity,
+                                metric: rule.condition?.metric ?? DEFAULT_FORM.metric,
+                                operator: rule.condition?.operator ?? DEFAULT_FORM.operator,
+                                threshold: rule.condition?.threshold ?? DEFAULT_FORM.threshold,
+                                windowMinutes: rule.condition?.windowMinutes ?? DEFAULT_FORM.windowMinutes,
+                                cooldownMinutes: rule.cooldownMinutes ?? DEFAULT_FORM.cooldownMinutes,
+                                orgScope: rule.organizationIds ? "specific" : "all",
+                                channels: new Set<AlertChannel>(
+                                  (Array.isArray(rule.channels) ? rule.channels : [])
+                                    .filter((c): c is AlertChannel => c === "EMAIL" || c === "WEBHOOK")),
+                              });
+                              setShowNewRuleDialog(true);
+                            }}
                             className="p-1.5 text-slate-400 hover:text-controlcenter-600 hover:bg-controlcenter-50 rounded-lg transition-colors"
                             title="Edit"
                           >
@@ -729,18 +763,20 @@ export default function AlertsPage() {
                         <div className="text-xs text-slate-500">{formatDateTime(h.firedAt)}</div>
                       </td>
                       <td>
-                        <div className="text-xs text-slate-500">{formatDateTime(h.resolvedAt)}</div>
+                        <div className="text-xs text-slate-500">{h.resolvedAt ? formatDateTime(h.resolvedAt) : "—"}</div>
                       </td>
                       <td>
-                        <span className="text-xs font-medium text-slate-600">{durationStr(h.durationMinutes)}</span>
+                        <span className="text-xs font-medium text-slate-600">
+                          {durationStr(minutesBetween(h.firedAt, h.resolvedAt))}
+                        </span>
                       </td>
                       <td>
-                        <div className="text-xs text-slate-500 max-w-xs" title={h.rootCause}>
-                          {h.rootCause.length > 80 ? h.rootCause.slice(0, 80) + "…" : h.rootCause}
+                        <div className="text-xs text-slate-500 max-w-xs" title={h.message ?? ""}>
+                          {(h.message ?? "").length > 80 ? (h.message ?? "").slice(0, 80) + "…" : (h.message ?? "—")}
                         </div>
                       </td>
                       <td>
-                        <div className="text-xs text-slate-500">{h.resolvedBy}</div>
+                        <div className="text-xs text-slate-500">{h.acknowledgedBy ?? "—"}</div>
                       </td>
                     </tr>
                   );

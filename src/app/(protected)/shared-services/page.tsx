@@ -831,9 +831,11 @@ export default function SharedServicesPage() {
       serviceName: s.serviceName,
       orgName: s.organizationName,
       callsThisMonth: s.currentMonthCalls,
-      successRate: s.currentMonthCalls > 0 ? 99.0 : 0,
       limitPerMonth: s.monthlyCallLimit,
-      costUsd: 0,
+      // Neither a per-org success rate nor a per-service cost is tracked — these were a literal
+      // 99% and $0.00 rendered as measurements. Real charges are on the Billing screen.
+      successRate: null as number | null,
+      costUsd: null as number | null,
     }));
   }, [subscriptions]);
 
@@ -1311,35 +1313,9 @@ export default function SharedServicesPage() {
                               </span>
                             </td>
                             <td className="px-4 py-3.5">
-                              {row.callsThisMonth === 0 ? (
-                                <span className="text-slate-400 text-xs">—</span>
-                              ) : (
-                                <div className="flex items-center gap-2">
-                                  <div className="w-16 bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                                    <div
-                                      className={`h-full rounded-full ${
-                                        row.successRate >= 99
-                                          ? "bg-green-500"
-                                          : row.successRate >= 95
-                                          ? "bg-blue-500"
-                                          : "bg-orange-400"
-                                      }`}
-                                      style={{ width: `${row.successRate}%` }}
-                                    />
-                                  </div>
-                                  <span
-                                    className={`text-xs font-medium ${
-                                      row.successRate >= 99
-                                        ? "text-green-600"
-                                        : row.successRate >= 95
-                                        ? "text-blue-600"
-                                        : "text-orange-600"
-                                    }`}
-                                  >
-                                    {row.successRate}%
-                                  </span>
-                                </div>
-                              )}
+                              {/* Success rate is not recorded per org/service — the usage tracker
+                                  counts calls only. Showing a literal 99% was fabrication. */}
+                              <span className="text-slate-400 text-xs">not tracked</span>
                             </td>
                             <td className="px-4 py-3.5">
                               <div className="space-y-1">
@@ -1362,7 +1338,7 @@ export default function SharedServicesPage() {
                             </td>
                             <td className="px-5 py-3.5 text-right">
                               <span className="font-semibold text-slate-900">
-                                ${row.costUsd.toFixed(2)}
+                                {row.costUsd == null ? "—" : `$${row.costUsd.toFixed(2)}`}
                               </span>
                             </td>
                           </tr>
@@ -1375,7 +1351,11 @@ export default function SharedServicesPage() {
                           Total Estimated Cost
                         </td>
                         <td className="px-5 py-3 text-right font-bold text-slate-900">
-                          ${usageData.reduce((sum, r) => sum + r.costUsd, 0).toFixed(2)}
+                          {/* Per-service cost is not attributed per org; the billing screen
+                              computes real charges from ServiceUsage. */}
+                          {usageData.every((r) => r.costUsd == null)
+                            ? "not tracked"
+                            : `$${usageData.reduce((sum, r) => sum + (r.costUsd ?? 0), 0).toFixed(2)}`}
                         </td>
                       </tr>
                     </tfoot>

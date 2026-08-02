@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Users, Plus, Edit, Lock, UserX, Shield, Eye, Mail, Clock,
-  RefreshCw, AlertTriangle, CheckCircle2, X,
+  RefreshCw, AlertTriangle, CheckCircle2, X, ShieldOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { userService, mfaService, apiError } from "@/services/controlcenter.service";
@@ -57,17 +57,26 @@ function isLoginToday(lastLogin?: string) {
 
 // ─── Role permissions matrix ──────────────────────────────────────────────────
 
+/**
+ * Mirrors the @PreAuthorize gates on the backend controllers. The previous table was hand-written
+ * and wrong in both directions: it said ADMIN could not manage integrations, users or settings
+ * (all three allow ADMIN), and that VIEWER could not see the audit trail (AuditController has no
+ * role gate at all, so any authenticated operator can).
+ */
 const PERMISSIONS = [
-  { label: "View dashboard", SUPER_ADMIN: true, ADMIN: true, SUPPORT: true, VIEWER: true },
-  { label: "Manage organizations", SUPER_ADMIN: true, ADMIN: true, SUPPORT: false, VIEWER: false },
-  { label: "Issue licenses", SUPER_ADMIN: true, ADMIN: true, SUPPORT: false, VIEWER: false },
-  { label: "Push releases", SUPER_ADMIN: true, ADMIN: true, SUPPORT: false, VIEWER: false },
-  { label: "Trigger deployments", SUPER_ADMIN: true, ADMIN: true, SUPPORT: false, VIEWER: false },
-  { label: "View audit trail", SUPER_ADMIN: true, ADMIN: true, SUPPORT: true, VIEWER: false },
-  { label: "Manage integrations", SUPER_ADMIN: true, ADMIN: false, SUPPORT: false, VIEWER: false },
-  { label: "Manage users", SUPER_ADMIN: true, ADMIN: false, SUPPORT: false, VIEWER: false },
-  { label: "Edit system settings", SUPER_ADMIN: true, ADMIN: false, SUPPORT: false, VIEWER: false },
-  { label: "View health & metrics", SUPER_ADMIN: true, ADMIN: true, SUPPORT: true, VIEWER: true },
+  { label: "View dashboard, health & metrics", SUPER_ADMIN: true, ADMIN: true, SUPPORT: true, VIEWER: true },
+  { label: "View audit trail", SUPER_ADMIN: true, ADMIN: true, SUPPORT: true, VIEWER: true },
+  { label: "Acknowledge / resolve alerts", SUPER_ADMIN: true, ADMIN: true, SUPPORT: true, VIEWER: false },
+  { label: "Manage organizations & entitlements", SUPER_ADMIN: true, ADMIN: true, SUPPORT: false, VIEWER: false },
+  { label: "Issue & revoke licences", SUPER_ADMIN: true, ADMIN: true, SUPPORT: false, VIEWER: false },
+  { label: "Publish & approve releases", SUPER_ADMIN: true, ADMIN: true, SUPPORT: false, VIEWER: false },
+  { label: "Create & control fleet rollouts", SUPER_ADMIN: true, ADMIN: true, SUPPORT: false, VIEWER: false },
+  { label: "Provision & apply infrastructure", SUPER_ADMIN: true, ADMIN: true, SUPPORT: false, VIEWER: false },
+  { label: "Manage users, integrations & settings", SUPER_ADMIN: true, ADMIN: true, SUPPORT: false, VIEWER: false },
+  { label: "Store cloud credentials", SUPER_ADMIN: true, ADMIN: false, SUPPORT: false, VIEWER: false },
+  { label: "Destroy a deployment", SUPER_ADMIN: true, ADMIN: false, SUPPORT: false, VIEWER: false },
+  { label: "Restore / download the Control Center database", SUPER_ADMIN: true, ADMIN: false, SUPPORT: false, VIEWER: false },
+  { label: "Reset another operator's MFA", SUPER_ADMIN: true, ADMIN: false, SUPPORT: false, VIEWER: false },
 ];
 
 const ROLES: ControlCenterUser["role"][] = ["SUPER_ADMIN", "ADMIN", "SUPPORT", "VIEWER"];
@@ -499,6 +508,20 @@ export default function UsersPage() {
                           className="p-1.5 rounded-lg text-slate-400 hover:text-controlcenter-600 hover:bg-controlcenter-50 transition-colors"
                         >
                           <Edit size={13} />
+                        </button>
+                        <button
+                          className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                          title="Reset two-factor authentication (break-glass; revokes sessions)"
+                          onClick={async () => {
+                            if (!confirm(`Reset MFA for ${u.email}? This removes their second factor and signs them out everywhere.`)) return;
+                            try {
+                              await mfaService.disable(u.id);
+                              toast.success("Two-factor authentication reset; sessions revoked");
+                              load();
+                            } catch (e) { toast.error(apiError(e)); }
+                          }}
+                        >
+                          <ShieldOff size={14} />
                         </button>
                         <button
                           title="Disable account"

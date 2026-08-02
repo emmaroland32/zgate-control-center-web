@@ -162,17 +162,20 @@ export interface AuditEntry {
 // -------------------------------------------------------
 // System Health
 // -------------------------------------------------------
+/**
+ * Health as Control Center can actually observe it — from the deployment's own heartbeat. There is
+ * no outbound probe, so response time and component-level database/Redis status are not available
+ * and are typed away rather than fabricated. Per-org uptime is on the SLA screen, computed from
+ * recorded outages.
+ */
 export interface ServiceHealth {
   organizationId: string;
   organizationName: string;
   backendStatus: "UP" | "DOWN" | "DEGRADED";
-  databaseStatus: "UP" | "DOWN" | "DEGRADED";
-  redisStatus: "UP" | "DOWN" | "DEGRADED";
   version: string;
-  uptimeHours: number;
-  responseTimeMs: number;
   activeUsers: number;
-  lastChecked: string;
+  lastChecked: string | null;
+  lastSeenAt?: string | null;
 }
 
 // -------------------------------------------------------
@@ -188,6 +191,8 @@ export interface ControlCenterDashboardStats {
   pendingLicenseRenewals: number;
   expiringLicenses: number;
   latestReleaseVersion: string;
+  latestReleaseChannel?: string | null;
+  latestReleasePublishedAt?: string | null;
   deploymentsPendingUpdate: number;
   totalActiveLicenses: number;
   recentDeployments: Deployment[];
@@ -375,18 +380,17 @@ export interface SchemaInfo {
   lastModified?: string;
 }
 
+/**
+ * A pg_dump of Control Center's OWN database, as the backup directory reports it. Customer
+ * deployments' managed backups are a different thing entirely (see the Cloud Backups screen).
+ */
 export interface DatabaseBackup {
   id: string;
-  organizationId: string;
-  status: "IN_PROGRESS" | "SUCCESS" | "FAILED";
-  type: "FULL" | "INCREMENTAL" | "SCHEMA_ONLY";
-  startedAt: string;
+  name: string;
+  status: string;
+  sizeBytes: number;
+  createdAt: string;
   completedAt?: string;
-  sizeBytes?: number;
-  storagePath?: string;
-  expiresAt?: string;
-  triggeredBy: string;
-  note?: string;
 }
 
 // ================================================================
@@ -723,21 +727,26 @@ export interface InvoiceLineItem {
   periodLabel: string;
 }
 
+/**
+ * Nullable fields are ones Control Center does not model. They were previously hardcoded to the
+ * same value for every customer (Net 15, auto-invoice on day 1, $0 credit) and rendered as if
+ * they were that account's real configuration.
+ */
 export interface BillingAccount {
   organizationId: string;
   organizationName: string;
   billingEmail: string;
-  billingContact: string;
-  billingAddress?: string;
+  billingContact: string | null;
+  billingAddress?: string | null;
   country: string;
   currency: string;
-  paymentTermsDays: number;   // e.g. 30
-  taxId?: string;
-  autoInvoice: boolean;
-  invoiceDay: number;         // day of month invoices are generated
+  paymentTermsDays: number | null;
+  taxId?: string | null;
+  autoInvoice: boolean | null;
+  invoiceDay: number | null;
   currentMonthEstimateUsd: number;
   outstandingBalanceUsd: number;
-  creditBalanceUsd: number;
+  creditBalanceUsd: number | null;
   paymentHistory: PaymentRecord[];
 }
 

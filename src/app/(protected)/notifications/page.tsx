@@ -6,7 +6,8 @@ import {
   Activity, Lock, AlertTriangle, CheckCircle2, XCircle, ShieldAlert,
 } from "lucide-react";
 import { timeAgo } from "@/lib/utils";
-import { alertService } from "@/services/controlcenter.service";
+import { alertService, apiError } from "@/services/controlcenter.service";
+import { toast } from "sonner";
 import Link from "next/link";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -170,14 +171,14 @@ export default function NotificationsPage() {
     try {
       await alertService.acknowledge(id);
       setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
-    } catch { /* keep local state unchanged on failure */ }
+    } catch (e) { toast.error(apiError(e)); }
   }
 
   async function dismiss(id: string) {
     try {
       await alertService.resolve(id);
       setNotifications((prev) => prev.filter((n) => n.id !== id));
-    } catch { /* keep local state unchanged on failure */ }
+    } catch (e) { toast.error(apiError(e)); }
   }
 
   async function markAllRead() {

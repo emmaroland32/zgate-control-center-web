@@ -156,8 +156,8 @@ export default function ReportsPage() {
   const [customCategory, setCustomCategory] = useState("Usage");
   const [customDimensions, setCustomDimensions] = useState<string[]>(["Organization"]);
   const [customChartType, setCustomChartType] = useState("Bar");
-  const [customDateFrom, setCustomDateFrom] = useState("2026-02-01");
-  const [customDateTo, setCustomDateTo] = useState("2026-03-19");
+  const [customDateFrom, setCustomDateFrom] = useState("");
+  const [customDateTo, setCustomDateTo] = useState("");
   const [customReportGenerated, setCustomReportGenerated] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [customReportName, setCustomReportName] = useState("");
@@ -502,29 +502,8 @@ export default function ReportsPage() {
                 </tr>
               </thead>
               <tbody>
-                {([] as { month: string; new: number; churned: number }[]).map((row) => {
-                  const net = row.new - row.churned;
-                  return (
-                    <tr key={row.month}>
-                      <td className="text-xs font-medium">{row.month}</td>
-                      <td>
-                        <span className="flex items-center gap-1 text-xs text-emerald-600 font-semibold">
-                          <TrendingUp size={11} /> +{row.new}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="flex items-center gap-1 text-xs text-red-500 font-semibold">
-                          <TrendingDown size={11} /> -{row.churned}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`text-xs font-bold ${net >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                          {net >= 0 ? "+" : ""}{net}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {null}
+                <tr><td colSpan={6} className="text-center text-sm text-slate-400 py-6">Not available — Control Center does not retain the history this table needs.</td></tr>
               </tbody>
             </table>
           </div>
@@ -795,16 +774,8 @@ export default function ReportsPage() {
                 </tr>
               </thead>
               <tbody>
-                {([] as { org: string; version: string; status: string; duration: number | null; by: string; date: string }[]).map((dep, i) => (
-                  <tr key={i}>
-                    <td className="font-medium text-xs">{dep.org}</td>
-                    <td><span className="font-mono text-xs">v{dep.version}</span></td>
-                    <td><DeployStatusBadge status={dep.status} /></td>
-                    <td className="text-xs text-slate-500">{dep.duration !== null ? `${dep.duration}m` : "—"}</td>
-                    <td className="text-xs text-slate-500">{dep.by}</td>
-                    <td className="text-xs text-slate-500">{formatDateTime(dep.date)}</td>
-                  </tr>
-                ))}
+                {null}
+                <tr><td colSpan={5} className="text-center text-sm text-slate-400 py-6">Not available — Control Center does not retain the history this table needs.</td></tr>
               </tbody>
             </table>
           </div>
@@ -816,20 +787,8 @@ export default function ReportsPage() {
               <h3 className="text-sm font-bold text-slate-900">Top Performing Organisations</h3>
             </div>
             <div className="space-y-3">
-              {([] as { name: string; deployments: number; successRate: number }[]).map((org, i) => (
-                <div key={org.name} className="flex items-center gap-4">
-                  <span className="w-5 text-xs text-slate-400 font-bold text-right shrink-0">#{i + 1}</span>
-                  <span className="text-sm font-medium text-slate-700 flex-1">{org.name}</span>
-                  <span className="text-xs text-slate-500">{org.deployments} deployments</span>
-                  <div className="w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-emerald-500 rounded-full"
-                      style={{ width: `${org.successRate}%` }}
-                    />
-                  </div>
-                  <span className="text-xs font-bold text-emerald-600 w-10 text-right">{org.successRate}%</span>
-                </div>
-              ))}
+              {null}
+                <tr><td colSpan={5} className="text-center text-sm text-slate-400 py-6">Not available — Control Center does not retain the history this table needs.</td></tr>
             </div>
           </div>
         </div>

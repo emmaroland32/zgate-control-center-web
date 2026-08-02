@@ -1850,7 +1850,7 @@ export default function SetupWizardPage() {
       try {
         const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
         if (saved) return JSON.parse(saved) as WizardState;
-      } catch { /* ignore */ }
+      } catch { /* corrupt draft in localStorage — fall through to a fresh wizard */ }
     }
     return buildDefaultState();
   });

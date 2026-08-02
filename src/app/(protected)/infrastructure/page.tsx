@@ -33,7 +33,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { infrastructureService, organizationService } from "@/services/controlcenter.service";
+import { infrastructureService, organizationService, deploymentService, apiError } from "@/services/controlcenter.service";
+import type { OrgInstance } from "@/types";
 import { timeAgo, truncate } from "@/lib/utils";
 import type { ContainerStatus, Organization } from "@/types";
 
@@ -82,92 +83,8 @@ interface ResourcePoint {
 }
 
 // ─── Resource History (seeded from real container stats, deterministic) ────────
-function generateResourceHistory(cpuBase: number, memBase: number): ResourcePoint[] {
-  // Deterministic sine-wave variation around the real base values
-  return Array.from({ length: 25 }, (_, i) => ({
-    hour: `${String(i).padStart(2, "0")}:00`,
-    cpu: Math.max(1, Math.round(cpuBase + Math.sin(i * 0.5) * 8 + Math.cos(i * 0.3) * 4)),
-    mem: Math.max(10, Math.round(memBase + Math.sin(i * 0.4) * 5 + Math.cos(i * 0.6) * 3)),
-  }));
-}
 
 
-function generateDockerCompose(org: OrgDeployment): string {
-  return `# ZGATE Docker Compose — ${org.name}
-# Generated: ${new Date().toISOString()}
-# Organization: ${org.slug}
-
-version: "3.9"
-
-services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: ${org.slug}_postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: zgate
-      POSTGRES_USER: zgate
-      POSTGRES_PASSWORD: \${DB_PASSWORD}
-    ports:
-      - "${org.containers.find((c) => c.name.includes("postgres"))?.ports[0].host ?? 5432}:5432"
-    volumes:
-      - ${org.slug}_postgres_data:/var/lib/postgresql/data
-    networks:
-      - zgate_network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U zgate"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  redis:
-    image: redis:7-alpine
-    container_name: ${org.slug}_redis
-    restart: unless-stopped
-    command: redis-server --requirepass \${REDIS_PASSWORD} --maxmemory 512mb --maxmemory-policy allkeys-lru
-    ports:
-      - "${org.containers.find((c) => c.name.includes("redis"))?.ports[0].host ?? 6379}:6379"
-    volumes:
-      - ${org.slug}_redis_data:/data
-    networks:
-      - zgate_network
-
-  backend:
-    image: zgate/backend:2.4.1
-    container_name: ${org.slug}_backend
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    ports:
-      - "${org.containers.find((c) => c.name.includes("backend"))?.ports[0].host ?? 8080}:8080"
-    volumes:
-      - ${org.slug}_backend_logs:/app/logs
-    env_file:
-      - .env
-    networks:
-      - zgate_network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
-volumes:
-  ${org.slug}_postgres_data:
-    driver: local
-  ${org.slug}_redis_data:
-    driver: local
-  ${org.slug}_backend_logs:
-    driver: local
-
-networks:
-  zgate_network:
-    driver: bridge
-`;
-}
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 function statusDot(status: ContainerStatus) {
@@ -252,6 +169,8 @@ export default function InfrastructurePage() {
   const [collapsedOrgs, setCollapsedOrgs] = useState<Set<string>>(new Set());
   const [containerMenuId, setContainerMenuId] = useState<string | null>(null);
   const [copiedCompose, setCopiedCompose] = useState(false);
+  const [composeYaml, setComposeYaml] = useState<string>("");
+  const [liveNodes, setLiveNodes] = useState<OrgInstance[]>([]);
   const [resourceOrgId, setResourceOrgId] = useState<string>("");
   const [deleteVolumeId, setDeleteVolumeId] = useState<string | null>(null);
   const [logsContainer, setLogsContainer] = useState<{ id: string; name: string } | null>(null);
@@ -354,15 +273,15 @@ export default function InfrastructurePage() {
           diskTotalGb: volumes.reduce((s, v) => s + v.totalGb, 0) || 100,
           netRxMbps: 0,
           netTxMbps: 0,
-          resourceHistory: generateResourceHistory(Math.round(cpuBase), Math.round(memBase)),
           volumes,
           containers,
         } as OrgDeployment;
       });
       setOrgs(builtOrgs);
       if (builtOrgs.length > 0) setResourceOrgId(builtOrgs[0].id);
-    } catch {
+    } catch (e) {
       setOrgs([]);
+      setToast({ msg: apiError(e, "Could not load infrastructure"), type: "err" });
     } finally {
       setLoading(false);
       setLoadingOrgs(false);
@@ -416,7 +335,7 @@ export default function InfrastructurePage() {
   };
 
   const downloadCompose = (org: OrgDeployment) => {
-    const content = generateDockerCompose(org);
+    const content = composeYaml;
     const blob = new Blob([content], { type: "text/yaml" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -427,7 +346,7 @@ export default function InfrastructurePage() {
   };
 
   const copyCompose = (org: OrgDeployment) => {
-    navigator.clipboard.writeText(generateDockerCompose(org)).then(() => {
+    navigator.clipboard.writeText(composeYaml).then(() => {
       setCopiedCompose(true);
       setTimeout(() => setCopiedCompose(false), 2000);
     });
@@ -435,6 +354,16 @@ export default function InfrastructurePage() {
 
   const selectedOrg =
     orgs.find((o) => o.id === resourceOrgId) ?? orgs[0];
+
+  // Per-node CPU/memory comes from the instance registry, which every heartbeat updates.
+  useEffect(() => {
+    if (!selectedOrg?.id) { setLiveNodes([]); return; }
+    let live = true;
+    deploymentService.getInstances(selectedOrg.id)
+      .then((d) => live && setLiveNodes(Array.isArray(d) ? d : []))
+      .catch(() => live && setLiveNodes([]));
+    return () => { live = false; };
+  }, [selectedOrg?.id]);
 
   const composeOrg =
     selectedOrgId === "all" ? orgs[0] : orgs.find((o) => o.id === selectedOrgId) ?? orgs[0];
@@ -836,54 +765,59 @@ export default function InfrastructurePage() {
             ))}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* CPU Chart */}
-            <div className="card p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <Cpu size={15} className="text-emerald-600" />
-                <h3 className="text-sm font-bold text-slate-900">CPU Usage — Last 24h</h3>
-                <span className="ml-auto text-xs text-slate-500">Avg: {selectedOrg.resourceHistory.reduce((s, p) => s + p.cpu, 0) / selectedOrg.resourceHistory.length | 0}%</span>
-              </div>
-              <ResponsiveContainer width="100%" height={220}>
-                <AreaChart data={selectedOrg.resourceHistory} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="gradCpu" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="hour" tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} interval={4} />
-                  <YAxis tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}%`} />
-                  <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e2e8f0" }} formatter={(v: number) => [`${v}%`, "CPU"]} />
-                  <Area type="monotone" dataKey="cpu" stroke="#10b981" strokeWidth={2} fill="url(#gradCpu)" dot={false} activeDot={{ r: 3 }} />
-                </AreaChart>
-              </ResponsiveContainer>
+          {/* Live resource readings.
+              There is no time-series store behind this console, so the previous "Last 24h" area
+              charts were a generated sine wave, not measurements. Each ZGATE node reports its own
+              CPU and memory on every heartbeat, so this shows those readings as-of the last
+              heartbeat — real numbers, honestly scoped to "now" rather than a fake history. */}
+          <div className="card p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <Cpu size={15} className="text-emerald-600" />
+              <h3 className="text-sm font-bold text-slate-900">Live node resources</h3>
+              <span className="ml-auto text-xs text-slate-400">
+                as of each node&apos;s last heartbeat
+              </span>
             </div>
-
-            {/* Memory Chart */}
-            <div className="card p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <MemoryStick size={15} className="text-blue-600" />
-                <h3 className="text-sm font-bold text-slate-900">Memory Usage — Last 24h</h3>
-                <span className="ml-auto text-xs text-slate-500">Avg: {selectedOrg.resourceHistory.reduce((s, p) => s + p.mem, 0) / selectedOrg.resourceHistory.length | 0}%</span>
+            <p className="text-xs text-slate-400 mb-3">
+              Reported by the deployment itself. Control Center keeps no resource history, so there
+              is no 24-hour trend to show.
+            </p>
+            {liveNodes.length === 0 ? (
+              <p className="text-sm text-slate-500">
+                No nodes have reported resource metrics for this organization yet.
+              </p>
+            ) : (
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr><th>Node</th><th>Platform</th><th>Version</th><th>CPU</th><th>Memory</th><th>Uptime</th><th>Last seen</th></tr>
+                  </thead>
+                  <tbody>
+                    {liveNodes.map((n) => {
+                      const memPct = n.memMaxMb && n.memMaxMb > 0
+                        ? Math.round((n.memUsedMb ?? 0) * 100 / n.memMaxMb) : null;
+                      return (
+                        <tr key={n.id}>
+                          <td className="font-mono text-xs">{n.nodeId ?? "—"}</td>
+                          <td className="text-xs">{n.platform ?? "—"}</td>
+                          <td className="text-xs">{n.appVersion ?? "—"}</td>
+                          <td className={`text-xs font-semibold ${(n.cpuPct ?? 0) >= 80 ? "text-red-600" : "text-slate-700"}`}>
+                            {n.cpuPct == null ? "—" : `${n.cpuPct}%`}
+                          </td>
+                          <td className={`text-xs font-semibold ${(memPct ?? 0) >= 90 ? "text-red-600" : "text-slate-700"}`}>
+                            {memPct == null ? "—" : `${memPct}%`}
+                          </td>
+                          <td className="text-xs text-slate-500">
+                            {n.uptimeSeconds ? `${Math.floor(n.uptimeSeconds / 3600)}h` : "—"}
+                          </td>
+                          <td className="text-xs text-slate-500">{n.lastSeenAt ? timeAgo(n.lastSeenAt) : "—"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-              <ResponsiveContainer width="100%" height={220}>
-                <AreaChart data={selectedOrg.resourceHistory} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="gradMem" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="hour" tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} interval={4} />
-                  <YAxis tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}%`} />
-                  <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e2e8f0" }} formatter={(v: number) => [`${v}%`, "Memory"]} />
-                  <Area type="monotone" dataKey="mem" stroke="#3b82f6" strokeWidth={2} fill="url(#gradMem)" dot={false} activeDot={{ r: 3 }} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+            )}
           </div>
 
           {/* Disk + Network */}
@@ -1035,12 +969,13 @@ export default function InfrastructurePage() {
             </select>
             <button className="btn-secondary" onClick={async () => {
               try {
-                await infrastructureService.getConfig();
-                showToast("Compose config regenerated");
-              } catch { showToast("Failed to regenerate", "err"); }
+                const cfg = await infrastructureService.getConfig();
+                setComposeYaml(typeof cfg === "string" ? cfg : (cfg?.content ?? cfg?.yaml ?? ""));
+                showToast("Compose configuration reloaded");
+              } catch (e) { showToast(apiError(e, "Failed to reload"), "err"); }
             }}>
               <RefreshCw size={14} />
-              Regenerate
+              Reload
             </button>
             <button
               className="btn-secondary"
@@ -1064,7 +999,7 @@ export default function InfrastructurePage() {
             </div>
             <div className="bg-slate-900 p-5 overflow-x-auto max-h-[600px]">
               <pre className="font-mono text-sm leading-relaxed">
-                {syntaxHighlight(generateDockerCompose(composeOrg))}
+                {composeYaml ? syntaxHighlight(composeYaml) : "# Loading the deployed compose configuration…"}
               </pre>
             </div>
           </div>

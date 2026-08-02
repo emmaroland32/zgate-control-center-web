@@ -135,8 +135,9 @@ function normalizePartner(p: any) {
     revenueShare: p.revenueShare ?? p.revenueSharePercent ?? 0,
     contractExpiresAt: p.contractExpiresAt ?? p.contractExpiry ?? null,
     joinedAt: p.joinedAt ?? p.createdAt ?? new Date().toISOString(),
-    deploymentCount: p.deploymentCount ?? 0,
-    activeDeployments: p.activeDeployments ?? 0,
+    // Not columns on Partner — the partners screen counts real organizations by partnerId.
+    deploymentCount: p.deploymentCount ?? null,
+    activeDeployments: p.activeDeployments ?? null,
   };
 }
 
@@ -186,6 +187,16 @@ function normalizeLicenseList(list: any) {
  * Map an Organization's deploymentStatus to ServiceHealth-compatible backendStatus.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+/**
+ * Map an Organization onto the shape the health screens render.
+ *
+ * <p>Everything here is derived from what the org record actually knows. Fields Control Center
+ * cannot observe are left NULL rather than invented: this used to hardcode 720 uptime hours,
+ * 99.9% uptime and a 0ms response time, which rendered as a permanent "100.0%" on the dashboard
+ * and labelled every healthy customer "unreachable". Database/Redis status is likewise not a
+ * probe — the instance reports one overall state, so pretending to two component checks was a
+ * fiction. Real per-org uptime lives on the SLA screen, computed from recorded outages.
+ */
 function orgToServiceHealth(org: any) {
   const statusMap: Record<string, "UP" | "DOWN" | "DEGRADED"> = {
     HEALTHY:      "UP",
@@ -201,8 +212,7 @@ function orgToServiceHealth(org: any) {
     DEVELOPMENT: "DEVELOPMENT",
   };
   const backendStatus = statusMap[org.deploymentStatus] ?? "DOWN";
-  const dbStatus: "UP" | "DOWN" | "DEGRADED" = backendStatus === "DOWN" ? "DOWN" : "UP";
-  const redisStatus: "UP" | "DOWN" | "DEGRADED" = backendStatus === "DOWN" ? "DOWN" : "UP";
+  const lastSeen = org.lastSeenAt ?? org.last_seen_at ?? null;
 
   return {
     id: org.id,
@@ -210,15 +220,10 @@ function orgToServiceHealth(org: any) {
     organizationName: org.name,
     environment: envMap[org.deploymentEnv ?? org.deployment_env] ?? "PRODUCTION",
     backendStatus,
-    databaseStatus: dbStatus,
-    redisStatus,
     version: org.deployedVersion ?? org.deployed_version ?? "—",
-    uptimeHours: backendStatus === "UP" ? 720 : 0,
-    responseTimeMs: backendStatus === "UP" ? 0 : 0,
     activeUsers: org.activeUsers ?? org.active_users ?? 0,
-    lastChecked: org.lastSeenAt ?? org.last_seen_at ?? org.updatedAt ?? org.updated_at ?? new Date().toISOString(),
-    // Extra field for health page DeploymentHealth interface
-    uptime: backendStatus === "UP" ? 99.9 : backendStatus === "DEGRADED" ? 97.5 : 0,
+    lastSeenAt: lastSeen,
+    lastChecked: lastSeen ?? org.updatedAt ?? org.updated_at ?? null,
   };
 }
 
@@ -281,19 +286,19 @@ function normalizeSubscription(sub: any) {
 }
 const normalizeSubscriptionList = (l: any) => (Array.isArray(l) ? l.map(normalizeSubscription) : []);
 
-function normalizeInvoice(inv: any) {
-  if (!inv) return inv;
+function normalizeInvoice(v: any) {
+  if (!v) return v;
+  // The API now returns an InvoiceView: the invoice, plus the customer NAME and the line items
+  // that the detail drawer needs. Previously the org column rendered a raw UUID and the line-item
+  // table was always empty because nothing ever called the line-items endpoint.
+  const inv = v.invoice ?? v;
   return {
     ...inv,
-    totalUsd: inv.totalUsd ?? inv.totalAmount ?? 0,
-    subtotalUsd: inv.subtotalUsd ?? inv.subtotal ?? 0,
-    taxAmountUsd: inv.taxAmountUsd ?? inv.taxAmount ?? 0,
-    taxPercent: inv.taxPercent ?? (inv.taxRate != null ? Number(inv.taxRate) * 100 : 0),
-    issuedAt: inv.issuedAt ?? inv.createdAt ?? null,
-    dueAt: inv.dueAt ?? inv.dueDate ?? null,
-    organizationName: inv.organizationName ?? inv.organizationId ?? "",
-    organizationEmail: inv.organizationEmail ?? "",
-    lineItems: Array.isArray(inv.lineItems) ? inv.lineItems : [],
+    organizationName: v.organizationName ?? inv.organizationName ?? "—",
+    organizationEmail: v.organizationEmail ?? inv.organizationEmail ?? "",
+    lineItems: Array.isArray(v.lineItems) ? v.lineItems : [],
+    amount: inv.totalAmount ?? inv.amount ?? 0,
+    issuedAt: inv.createdAt ?? inv.issuedAt ?? null,
   };
 }
 const normalizeInvoiceList = (l: any) => (Array.isArray(l) ? l.map(normalizeInvoice) : []);
@@ -566,6 +571,9 @@ export const sharedServicesCatalog = {
 // Billing — BillingController /api/v1/billing
 // ============================================================
 export const billingService = {
+  /** Void an unpaid invoice. Without this a mis-raised renewal blocks all future renewals. */
+  cancelInvoice: (id: string) => api.post(`${V1}/billing/invoices/${id}/cancel`).then((r) => r.data),
+
   getDashboard: (orgId: string) => api.get(`${V1}/billing/dashboard/${orgId}`).then((r) => r.data),
   getAccounts: () => api.get(`${V1}/billing/accounts`).then((r) => r.data),
   getInvoices: () => api.get(`${V1}/billing/invoices`).then((r) => normalizeInvoiceList(unwrapPage(r.data))),
@@ -679,15 +687,21 @@ export const healthService = {
 // ============================================================
 export const dashboardService = {
   getStats: async () => {
-    const [summaryRes, latestRes, expiringRes] = await Promise.allSettled([
+    const [summaryRes, latestRes, expiringRes, licenseStatsRes, deploymentsRes] = await Promise.allSettled([
       api.get(`${V1}/organizations/dashboard`).then((r) => r.data),
       api.get(`${V1}/releases/latest`).then((r) => normalizeRelease(r.data)).catch(() => null),
       api.get(`${V1}/licenses/expiring-soon`).then((r) => normalizeLicenseList(r.data)).catch(() => []),
+      // Real counts rather than a hardcoded 0 for "Licensed Modules", and real recent activity
+      // rather than a permanently empty array.
+      api.get(`${V1}/licenses/stats`).then((r) => r.data).catch(() => null),
+      api.get(`${V1}/deployments`).then((r) => normalizeDeploymentList(r.data)).catch(() => []),
     ]);
 
     const s = summaryRes.status === "fulfilled" ? summaryRes.value : {};
     const latestRelease = latestRes.status === "fulfilled" ? latestRes.value : null;
     const expiringLicenses = expiringRes.status === "fulfilled" ? expiringRes.value : [];
+    const licenseStats = licenseStatsRes.status === "fulfilled" ? licenseStatsRes.value : null;
+    const deployments = deploymentsRes.status === "fulfilled" ? deploymentsRes.value : [];
 
     return {
       totalDeployments: Number(s.total ?? 0),
@@ -699,9 +713,12 @@ export const dashboardService = {
       pendingLicenseRenewals: Number(s.expiringSoon ?? 0),
       expiringLicenses: Number(s.expiringSoon ?? 0),
       latestReleaseVersion: latestRelease?.version ?? "—",
+      latestReleaseChannel: latestRelease?.channel ?? null,
+      latestReleasePublishedAt: latestRelease?.publishedAt ?? null,
       deploymentsPendingUpdate: Math.max(0, Number(s.total ?? 0) - Number(s.healthy ?? 0)),
-      totalActiveLicenses: 0,
-      recentDeployments: [],
+      totalActiveLicenses: Number(licenseStats?.active ?? licenseStats?.activeLicenses ?? 0),
+      recentDeployments: (Array.isArray(deployments) ? deployments : [])
+        .slice(0, 5),
       licenseAlerts: Array.isArray(expiringLicenses) ? expiringLicenses : [],
       healthSummary: [],
     };
@@ -807,6 +824,10 @@ export const reportService = {
 // Integrations — IntegrationController /api/v1/integrations
 // ============================================================
 export const integrationService = {
+  /** Fire a synthetic event at the endpoint so an operator can prove it works. */
+  testWebhook: (id: string): Promise<{ ok: boolean; statusCode?: number; detail: string }> =>
+    api.post(`${V1}/integrations/webhooks/${id}/test`).then((r) => r.data),
+
   // Webhooks
   getWebhooks: () =>
     api.get(`${V1}/integrations/webhooks`).then((r) => (Array.isArray(r.data) ? r.data.map(normalizeWebhook) : [])),
@@ -872,9 +893,23 @@ export const databaseService = {
   getMigrations: () => api.get(`${V1}/database/migrations`).then((r) => r.data),
   runMigrations: () => api.post(`${V1}/database/migrations/run`).then((r) => r.data),
   validateSchema: () => api.post(`${V1}/database/schema/validate`).then((r) => r.data),
-  getBackups: () => api.get(`${V1}/database/backups`).then((r) => r.data),
+  /**
+   * Control Center's OWN database (pg_dump). Returns availability alongside the list, because
+   * backups are off until a directory is configured, and restore needs a second flag.
+   */
+  getBackups: (): Promise<{
+    available: boolean; unavailableReason: string; restoreEnabled: boolean;
+    backups: { id: string; name: string; sizeBytes: number; status: string; createdAt: string }[];
+  }> => api.get(`${V1}/database/backups`).then((r) => r.data),
+
   createBackup: (name: string) => api.post(`${V1}/database/backups`, { name }).then((r) => r.data),
-  restoreBackup: notImplemented("databaseService.restoreBackup"),
+
+  /** Replaces the live control-plane database. `confirmation` must equal the backup id. */
+  restoreBackup: (id: string) =>
+    api.post(`${V1}/database/backups/${id}/restore`, { confirmation: id }).then((r) => r.data),
+
+  downloadBackupUrl: (id: string) => `${BASE_URL}${V1}/database/backups/${id}/download`,
+
   deleteBackup: (id: string) => api.delete(`${V1}/database/backups/${id}`).then((r) => r.data),
   testConnection: () => api.post(`${V1}/database/test-connection`).then((r) => r.data),
 };
@@ -892,7 +927,11 @@ export const logService = {
     acknowledged?: boolean;
     page?: number;
     size?: number;
-  }) => api.get(`${V1}/telemetry`, { params }).then((r) => r.data),
+  }) => api.get(`${V1}/telemetry`, { params })
+    // unwrapPage + normalize: the backend returns a Spring Page of TelemetryEvent (category/
+    // occurredAt), the viewer expects a flat array of {service,timestamp}. Missing either step
+    // left the Log Viewer permanently empty with no error.
+    .then((r) => (unwrapPage(r.data) as unknown[]).map(normalizeTelemetryEvent)),
 
   getStats: () => api.get(`${V1}/telemetry/stats`).then((r) => r.data),
 

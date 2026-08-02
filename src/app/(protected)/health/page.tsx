@@ -32,20 +32,21 @@ import { timeAgo } from "@/lib/utils";
 type ServiceStatus = "UP" | "DOWN" | "DEGRADED";
 type OverallStatus = "HEALTHY" | "DEGRADED" | "OFFLINE";
 
+/**
+ * What Control Center actually knows about a deployment: the state its telemetry reports. There is
+ * no outbound probe, so component-level Database/Redis pills and a response time were re-labels of
+ * this one field rather than measurements — they are gone rather than fabricated.
+ */
 interface DeploymentHealth {
   id: string;
   organizationId: string;
   organizationName: string;
   environment: string;
   backendStatus: ServiceStatus;
-  databaseStatus: ServiceStatus;
-  redisStatus: ServiceStatus;
   version: string;
-  uptimeHours: number;
-  responseTimeMs: number;
   activeUsers: number;
-  lastChecked: string;
-  uptime: number;
+  lastChecked: string | null;
+  lastSeenAt: string | null;
 }
 
 interface Incident {
@@ -53,7 +54,7 @@ interface Incident {
   title: string;
   description: string;
   affectedOrgs: string[];
-  startedAt: string;
+  startedAt: string | null;
   status: "INVESTIGATING" | "IDENTIFIED" | "MONITORING" | "RESOLVED";
 }
 
@@ -70,7 +71,7 @@ function deriveIncidents(deployments: DeploymentHealth[]): Incident[] {
         ? `Instance Offline — ${dep.organizationName}`
         : `Degraded Performance — ${dep.organizationName}`,
       description: dep.backendStatus === "DOWN"
-        ? `${dep.organizationName} is not reachable. All services offline. Last seen ${timeAgo(dep.lastChecked)}.`
+        ? `${dep.organizationName} is not reachable. Last seen ${dep.lastChecked ? dep.lastChecked ? timeAgo(dep.lastChecked) : "never seen" : "never"}.`
         : `${dep.organizationName} backend is reporting degraded status. Monitoring in progress.`,
       affectedOrgs: [dep.organizationName],
       startedAt: dep.lastChecked,
@@ -81,7 +82,7 @@ function deriveIncidents(deployments: DeploymentHealth[]): Incident[] {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function getOverallStatus(dep: DeploymentHealth): OverallStatus {
   if (dep.backendStatus === "DOWN") return "OFFLINE";
-  if (dep.backendStatus === "DEGRADED" || dep.databaseStatus === "DEGRADED" || dep.redisStatus === "DOWN")
+  if (dep.backendStatus === "DEGRADED")
     return "DEGRADED";
   return "HEALTHY";
 }
@@ -323,24 +324,18 @@ export default function HealthPage() {
 
                   <div className="flex items-center gap-2 flex-wrap">
                     <ServicePill status={dep.backendStatus} label="Backend" Icon={Server} />
-                    <ServicePill status={dep.databaseStatus} label="Database" Icon={Database} />
-                    <ServicePill status={dep.redisStatus} label="Redis" Icon={Wifi} />
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">Response</div>
-                      <div className={`text-sm font-bold ${responseColor(dep.responseTimeMs)}`}>
-                        {dep.responseTimeMs > 0 ? `${dep.responseTimeMs}ms` : <span className="text-slate-400">—</span>}
-                      </div>
-                    </div>
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
                       <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">Active Users</div>
                       <div className="text-sm font-bold text-slate-700">{dep.activeUsers}</div>
                     </div>
                     <div>
                       <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">Last Check</div>
-                      <div className="text-xs text-slate-500">{timeAgo(dep.lastChecked)}</div>
+                      <div className="text-xs text-slate-500">
+                        {dep.lastChecked ? dep.lastChecked ? timeAgo(dep.lastChecked) : "never seen" : "never seen"}
+                      </div>
                     </div>
                   </div>
 
@@ -353,7 +348,7 @@ export default function HealthPage() {
                         {dep.backendStatus === "UP" ? "Operational" : dep.backendStatus === "DEGRADED" ? "Degraded" : "Offline"}
                       </span>
                     </div>
-                    <div className="text-[10px] text-slate-400">Last seen {timeAgo(dep.lastChecked)}</div>
+                    <div className="text-[10px] text-slate-400">Last seen {dep.lastChecked ? timeAgo(dep.lastChecked) : "never seen"}</div>
                   </div>
 
                   <div className="pt-1 border-t border-slate-100 flex items-center justify-between">
@@ -465,7 +460,7 @@ export default function HealthPage() {
                       </div>
                       <div className="shrink-0 text-right">
                         <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">Started</div>
-                        <div className="text-xs text-slate-600 font-medium">{timeAgo(incident.startedAt)}</div>
+                        <div className="text-xs text-slate-600 font-medium">{incident.startedAt ? timeAgo(incident.startedAt) : "unknown"}</div>
                       </div>
                     </div>
                   );

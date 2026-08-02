@@ -715,12 +715,19 @@ export default function IntegrationsPage() {
                         </td>
                         <td>
                           <span className={`text-xs font-medium ${wh.successRate >= 95 ? "text-emerald-600" : wh.successRate >= 80 ? "text-amber-600" : "text-red-600"}`}>
-                            {wh.successRate.toFixed(1)}%
+                            {(wh.successRate ?? 100).toFixed(1)}%
                           </span>
                         </td>
                         <td>
                           <div className="flex items-center gap-1">
-                            <button title="Test webhook" className="p-1.5 rounded-lg text-slate-400 hover:text-controlcenter-600 hover:bg-controlcenter-50 transition-colors">
+                            <button onClick={async () => {
+                              try {
+                                const r = await integrationService.testWebhook(wh.id);
+                                if (r.ok) toast.success(r.detail);
+                                else toast.error(r.detail);
+                                load();
+                              } catch (e) { toast.error(apiError(e)); }
+                            }} title="Send a test event" className="p-1.5 rounded-lg text-slate-400 hover:text-controlcenter-600 hover:bg-controlcenter-50 transition-colors">
                               <RefreshCw size={13} />
                             </button>
                             <button

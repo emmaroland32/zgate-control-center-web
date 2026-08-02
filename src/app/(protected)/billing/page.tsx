@@ -23,6 +23,7 @@ import {
   ChevronDown,
   Calendar,
   Banknote,
+  XCircle,
 } from "lucide-react";
 import { billingService, organizationService, apiError } from "@/services/controlcenter.service";
 import type { Invoice, InvoiceLineItem, BillingAccount, Organization } from "@/types";
@@ -81,11 +82,13 @@ function InvoiceDetailModal({
   onClose,
   onSend,
   onMarkPaid,
+  onCancel,
 }: {
   invoice: Invoice;
   onClose: () => void;
   onSend: (id: string) => Promise<void>;
   onMarkPaid: (id: string) => Promise<void>;
+  onCancel: (id: string) => Promise<void>;
 }) {
   const [acting, setActing] = useState<string | null>(null);
 
@@ -98,6 +101,13 @@ function InvoiceDetailModal({
   async function handleMarkPaid() {
     setActing("pay");
     await onMarkPaid(invoice.id);
+    setActing(null);
+  }
+
+  async function handleCancel() {
+    if (!confirm(`Cancel invoice ${invoice.invoiceNumber}? It can then no longer be paid.`)) return;
+    setActing("cancel");
+    await onCancel(invoice.id);
     setActing(null);
   }
 
@@ -264,6 +274,17 @@ function InvoiceDetailModal({
               >
                 <CheckCircle size={14} />
                 {acting === "pay" ? "Marking…" : "Mark Paid"}
+              </button>
+            )}
+            {(invoice.status === "DRAFT" || invoice.status === "SENT" || invoice.status === "OVERDUE") && (
+              <button
+                onClick={handleCancel}
+                disabled={acting === "cancel"}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg
+                           border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-60"
+              >
+                <XCircle size={14} />
+                {acting === "cancel" ? "Cancelling…" : "Cancel invoice"}
               </button>
             )}
           </div>
@@ -621,7 +642,7 @@ function AccountsTab({ accounts }: { accounts: BillingAccount[] }) {
               </div>
             </div>
             <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${acc.autoInvoice ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500 border border-slate-200"}`}>
-              {acc.autoInvoice ? "Auto-Invoice" : "Manual"}
+              {acc.autoInvoice == null ? "—" : acc.autoInvoice ? "Auto-Invoice" : "Manual"}
             </span>
           </div>
 
@@ -637,10 +658,6 @@ function AccountsTab({ accounts }: { accounts: BillingAccount[] }) {
               <p className="text-[10px] text-slate-400 uppercase font-semibold tracking-wide">Est. This Month</p>
               <p className="text-base font-bold mt-0.5 text-slate-800">{fmt(acc.currentMonthEstimateUsd)}</p>
             </div>
-            <div className="bg-slate-50 rounded-lg p-3 text-center">
-              <p className="text-[10px] text-slate-400 uppercase font-semibold tracking-wide">Credit</p>
-              <p className="text-base font-bold mt-0.5 text-emerald-700">{fmt(acc.creditBalanceUsd)}</p>
-            </div>
           </div>
 
           {/* Meta */}
@@ -655,11 +672,11 @@ function AccountsTab({ accounts }: { accounts: BillingAccount[] }) {
             </div>
             <div className="flex justify-between">
               <span className="text-slate-400">Payment Terms</span>
-              <span className="text-slate-700 font-medium">Net {acc.paymentTermsDays}</span>
+              <span className="text-slate-700 font-medium">{acc.paymentTermsDays == null ? "—" : `Net ${acc.paymentTermsDays}`}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-400">Invoice Day</span>
-              <span className="text-slate-700 font-medium">Day {acc.invoiceDay}</span>
+              <span className="text-slate-700 font-medium">{acc.invoiceDay == null ? "—" : `Day ${acc.invoiceDay}`}</span>
             </div>
             {acc.taxId && (
               <div className="flex justify-between col-span-2">
@@ -723,14 +740,17 @@ export default function BillingPage() {
           organizationId: a.organizationId,
           organizationName: a.organizationName,
           billingEmail: a.billingEmail || "—",
-          billingContact: "—",
-          billingAddress: "—",
+          // Control Center does not model billing contacts, addresses, tax ids, payment terms
+          // or an invoicing day — these were hardcoded identically for every customer and read
+          // as real per-account configuration. Left null so the UI can render "—".
+          billingContact: null,
+          billingAddress: null,
           country: a.country || "—",
-          currency: "USD",
-          paymentTermsDays: 15,
-          taxId: "—",
-          autoInvoice: true,
-          invoiceDay: 1,
+          currency: a.currency ?? "USD",
+          paymentTermsDays: null,
+          taxId: null,
+          autoInvoice: null,
+          invoiceDay: null,
           currentMonthEstimateUsd: Number(a.currentMonthEstimateUsd ?? 0),
           outstandingBalanceUsd: Number(a.outstandingBalanceUsd ?? 0),
           creditBalanceUsd: 0,
@@ -1156,6 +1176,14 @@ export default function BillingPage() {
           onClose={() => setSelectedInvoice(null)}
           onSend={handleSend}
           onMarkPaid={handleMarkPaid}
+          onCancel={async (id) => {
+            try {
+              await billingService.cancelInvoice(id);
+              toast.success("Invoice cancelled");
+              setSelectedInvoice(null);
+              await fetchBillingData();
+            } catch (e) { toast.error(apiError(e)); }
+          }}
         />
       )}
 

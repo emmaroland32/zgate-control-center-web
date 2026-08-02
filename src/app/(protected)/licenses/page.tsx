@@ -703,6 +703,11 @@ export default function LicensesPage() {
             onClick={async () => {
               try {
                 const result = await licenseService.verifyAll();
+      // The result used to be discarded, so the button appeared to do nothing at all.
+      const list = Array.isArray(result) ? result : (result?.reports ?? []);
+      const bad = list.filter((r: { valid?: boolean; ok?: boolean }) => r.valid === false || r.ok === false);
+      if (bad.length === 0) toast.success(`All ${list.length} licence(s) verified — signatures intact.`);
+      else toast.error(`${bad.length} of ${list.length} licence(s) FAILED integrity verification.`);
               } catch {
                 toast.warning("Backend unavailable for integrity check");
               }

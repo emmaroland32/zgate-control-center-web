@@ -19,7 +19,7 @@ import {
   Database,
   Server,
 } from "lucide-react";
-import { logService, organizationService } from "@/services/controlcenter.service";
+import { apiError, logService, organizationService } from "@/services/controlcenter.service";
 import { timeAgo } from "@/lib/utils";
 import type { LogEntry, LogLevel, LogService, LogQuery } from "@/types";
 
@@ -98,24 +98,24 @@ export default function LogViewerPage() {
     if (paused) return;
     setLoading(true);
     setError(null);
-    const query: LogQuery = {
-      organizationId: selectedDeployment !== "all" ? selectedDeployment : undefined,
-      service: selectedServices.size === 1 ? Array.from(selectedServices)[0] : undefined,
+    // Param names must match TelemetryController's (orgId/category/size) — the old ones
+    // (organizationId/service/search/limit) were silently ignored, so no filter ever applied.
+    const query = {
+      orgId: selectedDeployment !== "all" ? selectedDeployment : undefined,
+      category: selectedServices.size === 1 ? Array.from(selectedServices)[0] : undefined,
       level: selectedLevels.size === 1 ? Array.from(selectedLevels)[0] : undefined,
-      search: search || undefined,
       from: fromDate || undefined,
       to: toDate || undefined,
-      limit: 500,
+      size: 500,
     };
     try {
       const data = await logService.query(query);
-      if (Array.isArray(data) && data.length > 0) {
-        setLogs(data);
-      } else {
-        setLogs([]);
-      }
-    } catch {
+      setLogs(Array.isArray(data) ? data : []);
+      // `search` has no server-side equivalent; it is applied client-side below so the box
+      // does something rather than looking like a filter that found nothing.
+    } catch (e) {
       setLogs([]);
+      setError(apiError(e, "Could not load logs"));
     } finally {
       setLoading(false);
     }

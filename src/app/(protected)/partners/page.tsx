@@ -185,8 +185,8 @@ function PartnerCard({
           <div>
             <p className="text-xs text-slate-400 mb-0.5">Deployments</p>
             <p className="text-sm font-semibold text-slate-900">
-              {partner.activeDeployments}{" "}
-              <span className="text-slate-400 font-normal">/ {partner.deploymentCount}</span>
+              {partner.activeDeployments ?? "—"}{" "}
+              <span className="text-slate-400 font-normal">/ {partner.deploymentCount ?? "—"}</span>
             </p>
             <p className="text-xs text-slate-400">active / total</p>
           </div>
@@ -759,12 +759,12 @@ function OverviewTab({ partner }: { partner: Partner }) {
       <div className="grid grid-cols-3 gap-3">
         <div className="stat-card text-center items-center">
           <Building2 size={18} className="text-controlcenter-500 mb-1" />
-          <span className="stat-value">{partner.deploymentCount}</span>
+          <span className="stat-value">{partner.deploymentCount ?? "—"}</span>
           <span className="stat-label">Total Deployments</span>
         </div>
         <div className="stat-card text-center items-center">
           <TrendingUp size={18} className="text-emerald-500 mb-1" />
-          <span className="stat-value">{partner.activeDeployments}</span>
+          <span className="stat-value">{partner.activeDeployments ?? "—"}</span>
           <span className="stat-label">Active</span>
         </div>
         <div className="stat-card text-center items-center">
@@ -825,9 +825,9 @@ function DeploymentsTab({ partner }: { partner: Partner }) {
     setLoading(true);
     organizationService.getAll()
       .then((orgs: Organization[]) => {
-        const partnerOrgs = orgs.filter((o: Organization) =>
-          o.country === partner.country || o.partnerId === partner.id
-        ).slice(0, partner.deploymentCount || 5);
+        // Attribution is partnerId ONLY. Matching on country attributed every organization in
+        // the same country to this partner — a revenue-share figure built on that is wrong.
+        const partnerOrgs = orgs.filter((o: Organization) => o.partnerId === partner.id);
         setDeployments(partnerOrgs);
       })
       .catch(() => setDeployments([]))
@@ -838,11 +838,8 @@ function DeploymentsTab({ partner }: { partner: Partner }) {
     <div className="space-y-3">
       <div className="flex items-center justify-between mb-1">
         <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-          Managed Deployments ({partner.deploymentCount})
+          Managed Deployments ({deployments.length})
         </h4>
-        <button className="btn-primary text-xs py-1 px-2.5">
-          <Plus size={11} /> Add Deployment
-        </button>
       </div>
       {loading ? (
         <div className="text-xs text-slate-400 text-center py-6">Loading deployments…</div>
@@ -981,9 +978,6 @@ function ContactsTab({ partner }: { partner: Partner }) {
       <div className="card p-4 border-dashed">
         <div className="flex items-center justify-between">
           <span className="text-sm text-slate-400">No secondary contact on file</span>
-          <button className="btn-secondary text-xs py-1 px-2.5">
-            <Plus size={11} /> Add Contact
-          </button>
         </div>
       </div>
     </div>
@@ -1039,7 +1033,7 @@ function PartnersTable({
                 </div>
               </td>
               <td>
-                <span className="font-semibold">{p.activeDeployments}</span>
+                <span className="font-semibold">{p.activeDeployments ?? "—"}</span>
                 <span className="text-slate-400"> / {p.deploymentCount}</span>
               </td>
               <td>

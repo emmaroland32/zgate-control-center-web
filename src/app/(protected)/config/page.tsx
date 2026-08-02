@@ -35,53 +35,32 @@ interface SnapshotMock extends ConfigSnapshot {
   orgName: string;
 }
 
-const TEMPLATES: ConfigTemplate[] = [
+/**
+ * Templates seed keys the SERVER actually reads. The previous set (JWT_EXPIRY_HOURS, BCRYPT_ROUNDS,
+ * RATE_LIMIT_RPM, FEATURE_2FA…) matched nothing in the backend — applying one wrote rows that were
+ * never consulted, which reads as configuring the platform.
+ */
+const TEMPLATES: { id: string; tier: string; name: string; description: string; entries: { key: string; value: string }[] }[] = [
   {
-    id: "tpl-starter",
-    name: "Starter",
-    description: "For development and POC deployments. Uses default credentials, debug mode enabled, minimal security hardening.",
+    id: "fleet",
     tier: "STARTER",
+    name: "Fleet operations",
+    description: "Rollout cadence and liveness thresholds.",
     entries: [
-      { key: "APP_ENV", value: "development" },
-      { key: "APP_LOG_LEVEL", value: "DEBUG" },
-      { key: "JWT_EXPIRY_HOURS", value: "24" },
-      { key: "BCRYPT_ROUNDS", value: "10" },
-      { key: "RATE_LIMIT_RPM", value: "1000" },
-      { key: "DB_MAX_POOL_SIZE", value: "5" },
+      { key: "controlcenter.fleet.health.offlineAfterMinutes", value: "15" },
+      { key: "controlcenter.fleet.backupStaleHours", value: "26" },
+      { key: "controlcenter.fleet.subscriptionLapseWarnDays", value: "30" },
     ],
   },
   {
-    id: "tpl-standard",
-    name: "Standard",
-    description: "For staging and production. Proper JWT secrets, TLS email, balanced resource limits, audit logging enabled.",
+    id: "billing",
     tier: "STANDARD",
+    name: "Billing",
+    description: "Invoice defaults and renewal lead time.",
     entries: [
-      { key: "APP_ENV", value: "production" },
-      { key: "APP_LOG_LEVEL", value: "INFO" },
-      { key: "JWT_EXPIRY_HOURS", value: "8" },
-      { key: "BCRYPT_ROUNDS", value: "12" },
-      { key: "RATE_LIMIT_RPM", value: "500" },
-      { key: "DB_MAX_POOL_SIZE", value: "20" },
-      { key: "FEATURE_AUDIT_LOG", value: "true" },
-      { key: "FEATURE_2FA", value: "true" },
-    ],
-  },
-  {
-    id: "tpl-enterprise",
-    name: "Enterprise",
-    description: "Full configuration for enterprise deployments. HA-ready settings, external SMTP, S3 storage, everything audited.",
-    tier: "ENTERPRISE",
-    entries: [
-      { key: "APP_ENV", value: "production" },
-      { key: "APP_LOG_LEVEL", value: "INFO" },
-      { key: "JWT_EXPIRY_HOURS", value: "4" },
-      { key: "BCRYPT_ROUNDS", value: "14" },
-      { key: "RATE_LIMIT_RPM", value: "300" },
-      { key: "DB_MAX_POOL_SIZE", value: "50" },
-      { key: "FEATURE_AUDIT_LOG", value: "true" },
-      { key: "FEATURE_2FA", value: "true" },
-      { key: "STORAGE_TYPE", value: "s3" },
-      { key: "MAX_UPLOAD_MB", value: "200" },
+      { key: "controlcenter.billing.taxRate", value: "0.15" },
+      { key: "controlcenter.billing.invoiceDueDays", value: "30" },
+      { key: "controlcenter.billing.renewal.leadDays", value: "30" },
     ],
   },
 ];
@@ -135,7 +114,7 @@ type Tab = "values" | "templates" | "snapshots" | "env";
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function ConfigPage() {
-  const [selectedOrgId, setSelectedOrgId] = useState("org-fnb");
+  const [selectedOrgId, setSelectedOrgId] = useState("");
   const [activeTab, setActiveTab] = useState<Tab>("values");
   const [configs, setConfigs] = useState<ConfigEntry[]>([]);
   const [editedValues, setEditedValues] = useState<Record<string, string>>({});
