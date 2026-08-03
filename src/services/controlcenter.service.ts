@@ -949,6 +949,8 @@ export const databaseService = {
    */
   getBackups: (): Promise<{
     available: boolean; unavailableReason: string; restoreEnabled: boolean;
+    /** Non-empty when this console runs on several replicas but the dump directory is node-local. */
+    storageWarning: string;
     backups: { id: string; name: string; sizeBytes: number; status: string; createdAt: string }[];
   }> => api.get(`${V1}/database/backups`).then((r) => r.data),
 

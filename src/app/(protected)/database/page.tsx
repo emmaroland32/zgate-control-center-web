@@ -91,8 +91,9 @@ export default function DatabasePage() {
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
   const [activeTab, setActiveTab] = useState<Tab>("health");
   const [loading, setLoading] = useState(true);
-  const [backupInfo, setBackupInfo] = useState<{ available: boolean; restoreEnabled: boolean; unavailableReason: string }>(
-    { available: false, restoreEnabled: false, unavailableReason: "" });
+  const [backupInfo, setBackupInfo] = useState<{
+    available: boolean; restoreEnabled: boolean; unavailableReason: string; storageWarning: string;
+  }>({ available: false, restoreEnabled: false, unavailableReason: "", storageWarning: "" });
   const [health, setHealth] = useState<DatabaseHealth | null>(null);
 
   // Migrations
@@ -137,7 +138,8 @@ export default function DatabasePage() {
       setMigrations(m as (FlywayMigration & { schema: string })[]);
       setBackups(b?.backups ?? []);
       setBackupInfo({ available: !!b?.available, restoreEnabled: !!b?.restoreEnabled,
-                      unavailableReason: b?.unavailableReason ?? "" });
+                      unavailableReason: b?.unavailableReason ?? "",
+                      storageWarning: b?.storageWarning ?? "" });
     } catch (e) {
       setHealth(null);
       setMigrations([]);
@@ -754,6 +756,30 @@ export default function DatabasePage() {
       ══════════════════════════════════════════════════════════ */}
       {activeTab === "backups" && (
         <div className="space-y-4">
+          {/* Backups are off until a directory is configured — say so rather than showing an
+              empty table that looks like "no backups yet". */}
+          {!backupInfo.available && backupInfo.unavailableReason && (
+            <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600" />
+              <div className="text-sm text-amber-900">
+                <p className="font-medium">Backups are not configured</p>
+                <p className="mt-1 text-amber-800">{backupInfo.unavailableReason}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Node-local dumps behind a load balancer: the list is request-dependent and a restore
+              will fail at the worst possible moment. Surface it before then. */}
+          {backupInfo.storageWarning && (
+            <div className="flex gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-red-600" />
+              <div className="text-sm text-red-900">
+                <p className="font-medium">These backups are stored on one replica only</p>
+                <p className="mt-1 text-red-800">{backupInfo.storageWarning}</p>
+              </div>
+            </div>
+          )}
+
           {/* Stats row */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
