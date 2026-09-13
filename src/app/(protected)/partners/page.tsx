@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -657,9 +656,10 @@ function PartnerDetailPanel({
 }) {
   const [tab, setTab] = useState<DetailTab>("overview");
 
+  const partnerId = partner?.id;
   useEffect(() => {
-    if (partner) setTab("overview");
-  }, [partner?.id]);
+    if (partnerId) setTab("overview");
+  }, [partnerId]);
 
   if (!partner) return null;
 

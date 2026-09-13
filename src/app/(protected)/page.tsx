@@ -10,7 +10,8 @@ import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
 } from "recharts";
 import { dashboardService, healthService, deploymentService, organizationService } from "@/services/controlcenter.service";
-import { formatDate, formatDateTime, timeAgo } from "@/lib/utils";
+import Link from "next/link";
+import { formatDate, timeAgo } from "@/lib/utils";
 import type {
   ControlCenterDashboardStats, ServiceHealth, License, AuditEntry, Deployment,
 } from "@/types";
@@ -545,7 +546,7 @@ export default function DashboardPage() {
                 Quick Actions
               </h2>
               <div className="grid grid-cols-2 gap-2">
-                <a
+                <Link
                   href="/licenses"
                   className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-slate-200
                              hover:border-controlcenter-300 hover:bg-controlcenter-50 transition-all group text-center"
@@ -554,8 +555,8 @@ export default function DashboardPage() {
                     <ShieldCheck size={15} className="text-controlcenter-600" />
                   </span>
                   <span className="text-xs font-medium text-slate-700">Issue License</span>
-                </a>
-                <a
+                </Link>
+                <Link
                   href="/releases"
                   className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-slate-200
                              hover:border-emerald-300 hover:bg-emerald-50 transition-all group text-center"
@@ -564,8 +565,8 @@ export default function DashboardPage() {
                     <Rocket size={15} className="text-emerald-600" />
                   </span>
                   <span className="text-xs font-medium text-slate-700">Push Release</span>
-                </a>
-                <a
+                </Link>
+                <Link
                   href="/organizations"
                   className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-slate-200
                              hover:border-blue-300 hover:bg-blue-50 transition-all group text-center"
@@ -574,8 +575,8 @@ export default function DashboardPage() {
                     <Plus size={15} className="text-blue-600" />
                   </span>
                   <span className="text-xs font-medium text-slate-700">Add Organization</span>
-                </a>
-                <a
+                </Link>
+                <Link
                   href="/audit"
                   className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-slate-200
                              hover:border-purple-300 hover:bg-purple-50 transition-all group text-center"
@@ -584,7 +585,7 @@ export default function DashboardPage() {
                     <Eye size={15} className="text-purple-600" />
                   </span>
                   <span className="text-xs font-medium text-slate-700">View Audit Log</span>
-                </a>
+                </Link>
               </div>
             </div>
 

@@ -24,15 +24,6 @@ import {
   AlertTriangle,
   CheckCircle2,
 } from "lucide-react";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 import { infrastructureService, organizationService, deploymentService, apiError } from "@/services/controlcenter.service";
 import type { OrgInstance } from "@/types";
 import { timeAgo, truncate } from "@/lib/utils";
@@ -164,7 +155,7 @@ export default function InfrastructurePage() {
   const [selectedOrgId, setSelectedOrgId] = useState<string>("all");
   const [activeTab, setActiveTab] = useState<Tab>("containers");
   const [loading, setLoading] = useState(false);
-  const [loadingOrgs, setLoadingOrgs] = useState(true);
+  const [, setLoadingOrgs] = useState(true);
   const [orgs, setOrgs] = useState<OrgDeployment[]>([]);
   const [collapsedOrgs, setCollapsedOrgs] = useState<Set<string>>(new Set());
   const [containerMenuId, setContainerMenuId] = useState<string | null>(null);
@@ -187,10 +178,9 @@ export default function InfrastructurePage() {
     setLoading(true);
     setLoadingOrgs(true);
     try {
-      const [realContainers, realVolumes, realResources, realOrgs] = await Promise.all([
+      const [realContainers, realVolumes, realOrgs] = await Promise.all([
         infrastructureService.getContainers().catch(() => []),
         infrastructureService.getVolumes().catch(() => []),
-        infrastructureService.getResourceUsage().catch(() => ({})),
         organizationService.getAll().catch(() => []),
       ]);
 
@@ -248,17 +238,7 @@ export default function InfrastructurePage() {
         volumesByOrg.get(orgSlug)!.push(mapped);
       }
 
-      const cpuTotal = (realResources as Record<string, number>).cpuPercent || 0;
-      const memTotal = (realResources as Record<string, number>).memoryPercent || 0;
-
-      const builtOrgs = (realOrgs as Organization[]).map((org, i) => {
-        const cpuBase = containersByOrg.has(org.slug)
-          ? containersByOrg.get(org.slug)!.reduce((s, c) => s + c.cpuPercent, 0) / Math.max(containersByOrg.get(org.slug)!.length, 1)
-          : cpuTotal || (20 + (i % 3) * 15);
-        const memBase = containersByOrg.has(org.slug)
-          ? containersByOrg.get(org.slug)!.reduce((s, c) => s + (c.memoryMb / Math.max(c.memoryLimitMb, 1)) * 100, 0) / Math.max(containersByOrg.get(org.slug)!.length, 1)
-          : memTotal || (30 + (i % 2) * 20);
-
+      const builtOrgs = (realOrgs as Organization[]).map((org) => {
         // Use real containers if available, otherwise show empty
         const containers = containersByOrg.get(org.slug) || [];
         containers.forEach((c) => { c.orgId = org.id; c.orgName = org.name; });
@@ -304,7 +284,8 @@ export default function InfrastructurePage() {
   const toggleCollapse = (orgId: string) =>
     setCollapsedOrgs((prev) => {
       const next = new Set(prev);
-      next.has(orgId) ? next.delete(orgId) : next.add(orgId);
+      if (next.has(orgId)) next.delete(orgId);
+      else next.add(orgId);
       return next;
     });
 
@@ -345,7 +326,7 @@ export default function InfrastructurePage() {
     URL.revokeObjectURL(url);
   };
 
-  const copyCompose = (org: OrgDeployment) => {
+  const copyCompose = () => {
     navigator.clipboard.writeText(composeYaml).then(() => {
       setCopiedCompose(true);
       setTimeout(() => setCopiedCompose(false), 2000);
@@ -979,7 +960,7 @@ export default function InfrastructurePage() {
             </button>
             <button
               className="btn-secondary"
-              onClick={() => copyCompose(composeOrg)}
+              onClick={() => copyCompose()}
             >
               {copiedCompose ? <CheckCircle2 size={14} className="text-emerald-500" /> : <Copy size={14} />}
               {copiedCompose ? "Copied!" : "Copy"}

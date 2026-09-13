@@ -376,8 +376,8 @@ function IssueLicenseTab({ organizations, onLicenseIssued }: { organizations: Or
       });
       // bundle.payload is the signed zgate-license-v2 JSON covering all selected modules
       setGeneratedLic(bundle.payload);
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? "Failed to generate license bundle");
+    } catch (err) {
+      toast.error(apiError(err, "Failed to generate license bundle"));
     } finally {
       setSubmitting(false);
     }

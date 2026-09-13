@@ -196,7 +196,6 @@ function normalizeLicenseList(list: any) {
 /**
  * Map an Organization's deploymentStatus to ServiceHealth-compatible backendStatus.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 /**
  * Map an Organization onto the shape the health screens render.
  *
@@ -207,6 +206,7 @@ function normalizeLicenseList(list: any) {
  * probe — the instance reports one overall state, so pretending to two component checks was a
  * fiction. Real per-org uptime lives on the SLA screen, computed from recorded outages.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function orgToServiceHealth(org: any) {
   const statusMap: Record<string, "UP" | "DOWN" | "DEGRADED"> = {
     HEALTHY:      "UP",
@@ -785,14 +785,6 @@ export const dashboardService = {
 };
 
 // ============================================================
-// Stub helper — only used for features with no backend at all
-// (infrastructure containers, DB backups, log streaming)
-// ============================================================
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const notImplemented = (name: string) => (..._args: any[]): Promise<any> =>
-  Promise.reject(new Error(`${name} has no backend endpoint yet`));
-
-// ============================================================
 // Config — ConfigController /api/v1/config
 // ============================================================
 export const configService = {
@@ -845,8 +837,7 @@ export const reportService = {
   getDeploymentStats: () =>
     api.get(`${V1}/reports/deployments`).then((r) => r.data),
   // Frontend compat aliases
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getUsage: (_period?: any) =>
+  getUsage: (_period?: string) =>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     api.get(`${V1}/reports/summary`).then((r): any => {
       const s = r.data ?? {};
@@ -858,11 +849,11 @@ export const reportService = {
         totalApiCalls: s.totalApiCalls ?? 0,
       };
     }),
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getLicense: () =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     api.get(`${V1}/reports/modules`).then((r): any => ({ byModule: Array.isArray(r.data) ? r.data : [] })),
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getDeployments: () =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     api.get(`${V1}/reports/deployments`).then((r): any => ({ timeline: Array.isArray(r.data) ? r.data : [] })),
   exportPdf: (type = "summary") =>
     api.get(`${V1}/reports/export/pdf`, { params: { type }, responseType: "blob" }).then((r) => r.data),
@@ -1225,8 +1216,8 @@ export const provisioningService = {
    */
   getRun: (runId: string): Promise<ProvisioningRun> =>
     api.get(`${V1}/provisioning/runs/${runId}`, {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       silent: true,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any).then((r) => r.data),
 };
 

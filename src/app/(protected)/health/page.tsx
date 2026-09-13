@@ -9,9 +9,7 @@ import {
   Clock,
   RefreshCw,
   Globe,
-  Database,
   Server,
-  Wifi,
   TrendingUp,
   Zap,
 } from "lucide-react";
@@ -85,13 +83,6 @@ function getOverallStatus(dep: DeploymentHealth): OverallStatus {
   if (dep.backendStatus === "DEGRADED")
     return "DEGRADED";
   return "HEALTHY";
-}
-
-function responseColor(ms: number): string {
-  if (ms === 0) return "text-slate-400";
-  if (ms < 200) return "text-emerald-600";
-  if (ms <= 500) return "text-amber-600";
-  return "text-red-600";
 }
 
 function ServicePill({ status, label, Icon }: { status: ServiceStatus; label: string; Icon: React.ElementType }) {

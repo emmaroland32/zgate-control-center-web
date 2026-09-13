@@ -551,7 +551,7 @@ export default function DatabasePage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-slate-400 text-center py-6">Click "Validate Schema" to run checks across all schemas.</p>
+                <p className="text-xs text-slate-400 text-center py-6">Click &quot;Validate Schema&quot; to run checks across all schemas.</p>
               )}
             </div>
 

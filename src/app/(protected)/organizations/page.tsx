@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
@@ -343,23 +342,27 @@ function DetailPanel({ org, onClose, partnerName, onRefresh, onEdit, latestRelea
   const [licenses, setLicenses] = useState<{ module: string; status: string; expiryDate: string; activatedAt: string }[]>([]);
   const [deployments, setDeployments] = useState<{ version: string; status: string; deployedBy: string; completedAt: string }[]>([]);
 
-  useEffect(() => { if (org) setTab("overview"); }, [org?.id]);
+  // Primitive keys so the effects below re-run only when the selected org actually changes.
+  const orgId = org?.id;
+  const orgCreatedAt = org?.createdAt;
+
+  useEffect(() => { if (orgId) setTab("overview"); }, [orgId]);
 
   useEffect(() => {
-    if (!org) return;
-    licenseService.getByOrg(org.id).then((data) => {
+    if (!orgId) return;
+    licenseService.getByOrg(orgId).then((data) => {
       if (Array.isArray(data) && data.length > 0) {
         setLicenses(data.map((l: { module?: string; moduleName?: string; status?: string; expiresAt?: string; activatedAt?: string }) => ({
           module: l.module || l.moduleName || "",
           status: l.status || "ACTIVE",
           expiryDate: l.expiresAt || "",
-          activatedAt: l.activatedAt || org.createdAt,
+          activatedAt: l.activatedAt || orgCreatedAt || "",
         })));
       } else {
         setLicenses([]);
       }
     }).catch(() => setLicenses([]));
-    deploymentService.getByOrg(org.id).then((data) => {
+    deploymentService.getByOrg(orgId).then((data) => {
       if (Array.isArray(data) && data.length > 0) {
         setDeployments(data.map((d: { version?: string; status?: string; deployedBy?: string; completedAt?: string }) => ({
           version: d.version || "",
@@ -371,7 +374,7 @@ function DetailPanel({ org, onClose, partnerName, onRefresh, onEdit, latestRelea
         setDeployments([]);
       }
     }).catch(() => setDeployments([]));
-  }, [org?.id, org?.createdAt]);
+  }, [orgId, orgCreatedAt]);
 
   if (!org) return null;
 

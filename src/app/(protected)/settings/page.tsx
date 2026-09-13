@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  Settings, Shield, Bell, Key, Package, Save, Check,
-  Eye, EyeOff, RefreshCw, AlertTriangle, Globe, Lock,
+  Shield, Bell, Key, Package, Save, Check,
+  Eye, EyeOff, RefreshCw, AlertTriangle, Globe,
 } from "lucide-react";
 import { configService, securityPolicyService, apiError, SecurityPolicy } from "@/services/controlcenter.service";
 
@@ -160,7 +160,7 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [general, setGeneral] = useState<GeneralConfig>(DEFAULT_GENERAL);
-  const [security, setSecurity] = useState<SecurityConfig>(DEFAULT_SECURITY);
+  const [, setSecurity] = useState<SecurityConfig>(DEFAULT_SECURITY);
   const [policy, setPolicy] = useState<SecurityPolicy | null>(null);
   const [notifications, setNotifications] = useState<NotificationConfig>(DEFAULT_NOTIFICATIONS);
   const [licensing, setLicensing] = useState<LicensingConfig>(DEFAULT_LICENSING);

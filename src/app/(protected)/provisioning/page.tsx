@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
   Cloud, CloudCog, ServerCog, ShieldCheck, ShieldAlert, KeyRound, Trash2,
   CheckCircle2, XCircle, Clock, RefreshCw, Terminal, AlertTriangle, Plus,
-  Play, X, Copy, Database, Globe, GitCompareArrows, PlugZap, Server,
+  Play, X, Copy, Globe, GitCompareArrows, PlugZap, Server,
 } from "lucide-react";
 import {
   provisioningService, organizationService, apiError,

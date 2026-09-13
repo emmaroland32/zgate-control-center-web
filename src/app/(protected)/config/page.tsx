@@ -247,7 +247,8 @@ export default function ConfigPage() {
   const toggleRevealSecret = (key: string) => {
     setRevealedKeys((prev) => {
       const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   };
@@ -320,7 +321,7 @@ export default function ConfigPage() {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900">Apply Template</h3>
-                  <p className="text-sm text-slate-500">"{tpl.name}" template</p>
+                  <p className="text-sm text-slate-500">&quot;{tpl.name}&quot; template</p>
                 </div>
               </div>
               <p className="text-sm text-slate-700">

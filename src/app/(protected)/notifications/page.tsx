@@ -126,7 +126,7 @@ function getGroup(timestamp: string): "Today" | "Yesterday" | "Earlier" {
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>("all");
 
   useEffect(() => {

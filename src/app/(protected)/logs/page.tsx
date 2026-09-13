@@ -119,7 +119,7 @@ export default function LogViewerPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedDeployment, selectedServices, selectedLevels, search, fromDate, toDate, paused]);
+  }, [selectedDeployment, selectedServices, selectedLevels, fromDate, toDate, paused]);
 
   useEffect(() => {
     fetchLogs();

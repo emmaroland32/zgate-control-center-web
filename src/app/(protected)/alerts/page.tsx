@@ -15,11 +15,6 @@ import {
   Trash2,
   Plus,
   Filter,
-  Shield,
-  Activity,
-  Cpu,
-  HardDrive,
-  Database,
   Mail,
   Zap,
   ServerCrash,
@@ -187,7 +182,7 @@ export default function AlertsPage() {
   const [histDateFilter, setHistDateFilter] = useState("");
 
   // Loading / error
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
@@ -524,7 +519,7 @@ export default function AlertsPage() {
                         {alert.acknowledgedBy && (
                           <span className="flex items-center gap-1">
                             <Eye size={11} />
-                            Ack'd by {alert.acknowledgedBy} ({timeAgo(alert.acknowledgedAt!)})
+                            Ack&apos;d by {alert.acknowledgedBy} ({timeAgo(alert.acknowledgedAt!)})
                           </span>
                         )}
                       </div>
