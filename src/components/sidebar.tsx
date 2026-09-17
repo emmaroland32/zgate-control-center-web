@@ -32,9 +32,11 @@ function useCurrentUser() {
     const token = localStorage.getItem("controlcenter_token");
     if (!token) return;
     const claims = decodeToken(token);
-    const name = claims?.name || claims?.email?.split("@")[0] || "Admin";
     const email = claims?.email || claims?.sub || "";
-    const role = claims?.role || "ADMIN";
+    const name = claims?.name || email.split("@")[0] || "Operator";
+    // The claim is the Spring authority ("ROLE_SUPER_ADMIN"); the rank table uses plain names.
+    // Without stripping the prefix every rank lookup missed and the admin links vanished for all.
+    const role = String(claims?.role || "").replace(/^ROLE_/, "") || "VIEWER";
     const initials = name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
     setUser({ initials, name, email, role });
   }, []);
@@ -107,7 +109,7 @@ const sections = [
   {
     label: "Administration",
     items: [
-      { href: "/users", label: "Users", icon: Users },
+      { href: "/users", label: "Admin Management", icon: Users },
       { href: "/integrations", label: "Integrations", icon: Plug },
       { href: "/settings", label: "Settings", icon: Settings },
     ],

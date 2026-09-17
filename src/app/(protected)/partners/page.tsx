@@ -346,8 +346,9 @@ function AddPartnerDialog({
 
   if (!open) return null;
 
+  // z-[60]: above the detail panel (z-50). Edit opens both, and the panel used to cover Save.
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
@@ -569,8 +570,9 @@ function EditPartnerDialog({
 
   if (!partner) return null;
 
+  // z-[60]: above the detail panel (z-50). Edit opens both, and the panel used to cover Save.
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">

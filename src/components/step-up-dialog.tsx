@@ -21,9 +21,14 @@ export default function StepUpDialog() {
   const [mfaCode, setMfaCode] = useState("");
   const [needsMfa, setNeedsMfa] = useState(false);
   const [busy, setBusy] = useState(false);
+  // The action ("METHOD /path") that was refused; the ticket is issued for exactly that one.
+  const [action, setAction] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    const onRequired = () => setOpen(true);
+    const onRequired = (e: Event) => {
+      setAction((e as CustomEvent<{ action?: string }>).detail?.action);
+      setOpen(true);
+    };
     window.addEventListener(STEP_UP_EVENT, onRequired);
     return () => window.removeEventListener(STEP_UP_EVENT, onRequired);
   }, []);
@@ -31,13 +36,13 @@ export default function StepUpDialog() {
   async function confirm() {
     setBusy(true);
     try {
-      const r = await authService.stepUp(password, mfaCode || undefined);
+      const r = await authService.stepUp(password, mfaCode || undefined, action);
       setStepUpTicket(r.ticket, r.expiresInSeconds);
       setOpen(false);
       setPassword("");
       setMfaCode("");
       setNeedsMfa(false);
-      toast.success("Confirmed — repeat the action within 5 minutes.");
+      toast.success("Confirmed — repeat the action now. The confirmation works once, for that action only.");
     } catch (e) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const code = (e as any)?.response?.data?.code;
@@ -61,9 +66,10 @@ export default function StepUpDialog() {
           <ShieldCheck className="h-5 w-5 text-controlcenter-600" /> Confirm it&apos;s you
         </h2>
         <p className="text-sm text-slate-600">
-          This action changes or removes a customer&apos;s system, so it needs your password even
-          though you&apos;re already signed in.
+          This action is sensitive, so it needs your password even though you&apos;re already
+          signed in.
         </p>
+        {action && <p className="text-xs text-slate-400 font-mono break-all">{action}</p>}
 
         <div>
           <label className="text-xs font-medium text-slate-500">Password</label>

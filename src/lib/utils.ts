@@ -34,6 +34,30 @@ export function truncate(str: string, len: number) {
   return str.length > len ? str.slice(0, len) + "…" : str;
 }
 
+export type CurrentUser = { email: string; role: "SUPER_ADMIN" | "ADMIN" | "SUPPORT" | "VIEWER" | "" };
+
+/**
+ * The signed-in operator as the JWT describes them (display/gating only — the server enforces).
+ * The role claim is the Spring authority (`ROLE_ADMIN`); it is normalised here so callers can
+ * compare against the plain role names the API uses everywhere else.
+ */
+export function getCurrentUser(): CurrentUser {
+  try {
+    const token = typeof window !== "undefined" ? localStorage.getItem("controlcenter_token") : null;
+    if (!token) return { email: "", role: "" };
+    const payload = token.split(".")[1];
+    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
+    const claims = JSON.parse(json);
+    const raw = String(claims?.role ?? "").replace(/^ROLE_/, "");
+    const role = (["SUPER_ADMIN", "ADMIN", "SUPPORT", "VIEWER"].includes(raw) ? raw : "") as CurrentUser["role"];
+    return { email: claims?.email || claims?.sub || "", role };
+  } catch {
+    return { email: "", role: "" };
+  }
+}
+
+export const ROLE_RANK: Record<string, number> = { VIEWER: 0, SUPPORT: 1, ADMIN: 2, SUPER_ADMIN: 3 };
+
 /** Get the current user's email from the JWT token in localStorage */
 export function getCurrentUserEmail(): string {
   try {

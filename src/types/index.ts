@@ -203,14 +203,45 @@ export interface ControlCenterDashboardStats {
 // -------------------------------------------------------
 // Control Center User
 // -------------------------------------------------------
+export type OperatorRole = "SUPER_ADMIN" | "ADMIN" | "SUPPORT" | "VIEWER";
+
+/** An operator as GET /api/v1/users returns it (OperatorView) — no secrets, derived lock state. */
 export interface ControlCenterUser {
   id: string;
   name: string;
   email: string;
-  role: "SUPER_ADMIN" | "ADMIN" | "SUPPORT" | "VIEWER";
-  lastLogin?: string;
+  role: OperatorRole;
+  lastLogin?: string | null;
   createdAt: string;
   active: boolean;
+  mfaEnabled: boolean;
+  /** Linked to an identity provider subject (signs in via SSO). */
+  ssoLinked: boolean;
+  /** Currently locked out after repeated failed sign-ins. */
+  locked: boolean;
+  lockedUntil?: string | null;
+  failedLoginAttempts: number;
+}
+
+/** GET /api/v1/users/activity/summary — trailing-window counts for the activity monitor. */
+export interface OperatorActivitySummary {
+  since: string;
+  windowHours: number;
+  signIns: number;
+  failedSignIns: number;
+  lockouts: number;
+  adminActions: number;
+  activeOperators: number;
+  failures: number;
+}
+
+/** A Spring Data page, as the audit endpoints return it inside the envelope. */
+export interface PageOf<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
 }
 
 // -------------------------------------------------------

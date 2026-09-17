@@ -25,6 +25,9 @@ function createClient(): AxiosInstance {
 
   client.interceptors.response.use(
     (response) => {
+      // A step-up ticket is single-use on the server: once the request that carried it has gone
+      // through, forget it so the next destructive action prompts again instead of failing.
+      if (response.config?.headers?.["X-StepUp-Ticket"]) stepUpTicket = null;
       // Every controller response is wrapped by the backend in a { code, message, data } envelope.
       // Detect it by shape (all three keys always present — the header is only a bonus signal, since
       // it isn't readable cross-origin unless CORS exposes it). Unwrap centrally so every caller keeps
@@ -59,7 +62,14 @@ function createClient(): AxiosInstance {
       if (err.response?.status === 403
           && err.response?.data?.code === "STEP_UP_REQUIRED"
           && typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("zgate:step-up-required"));
+        // Whatever ticket we held is spent or was for another action. Tell the dialog WHICH action
+        // to confirm: the server binds the new ticket to exactly this method + path.
+        stepUpTicket = null;
+        const cfg = err.config ?? {};
+        const method = String(cfg.method ?? "post").toUpperCase();
+        let path = String(cfg.url ?? "");
+        try { path = new URL(path, cfg.baseURL || BASE_URL).pathname; } catch { /* keep as given */ }
+        window.dispatchEvent(new CustomEvent("zgate:step-up-required", { detail: { action: `${method} ${path}` } }));
       }
 
       const isLogin = (err.config?.url ?? "").includes("/auth/login");
@@ -385,9 +395,13 @@ export function currentStepUpTicket(): string | null {
 }
 
 export const authService = {
-  /** Re-authenticate for a destructive action. A valid session alone is not enough. */
-  stepUp: (password: string, mfaCode?: string): Promise<{ ticket: string; expiresInSeconds: number }> =>
-    api.post(`${V1}/auth/step-up`, { password, ...(mfaCode ? { mfaCode } : {}) }).then((r) => r.data),
+  /**
+   * Re-authenticate for a destructive action. A valid session alone is not enough. The ticket is
+   * single-use and bound to `action` ("METHOD /path") — the one request the operator is retrying.
+   */
+  stepUp: (password: string, mfaCode?: string, action?: string): Promise<{ ticket: string; expiresInSeconds: number }> =>
+    api.post(`${V1}/auth/step-up`, { password, ...(mfaCode ? { mfaCode } : {}), ...(action ? { action } : {}) })
+      .then((r) => r.data),
 
   login: (email: string, password: string, mfaCode?: string) =>
     api.post(`${V1}/auth/login`, { email, password, ...(mfaCode ? { mfaCode } : {}) }).then((r) => r.data),
@@ -597,8 +611,26 @@ export const sharedServicesCatalog = {
     api.put(`${V1}/shared-services/${id}`, denormalizeSharedService(data)).then((r) => normalizeSharedService(r.data)),
 
   // Org subscriptions
+  // The subscription rows carry only ids; resolve the organization and service names here so the
+  // Subscriptions table shows "E2E Org / E2E Service", not two UUIDs (which is what it used to show).
   getAllSubscriptions: () =>
-    api.get(`${V1}/shared-services/subscriptions`).then((r) => normalizeSubscriptionList(unwrapPage(r.data))),
+    Promise.all([
+      api.get(`${V1}/shared-services/subscriptions`),
+      api.get(`${V1}/organizations`).catch(() => ({ data: [] })),
+      api.get(`${V1}/shared-services`).catch(() => ({ data: [] })),
+    ]).then(([subs, orgs, services]) => {
+      const orgNames = new Map<string, string>(
+        (unwrapPage(orgs.data) as { id: string; name: string }[] ?? []).map((o) => [o.id, o.name]));
+      const svcById = new Map<string, { name: string; code: string }>(
+        (unwrapPage(services.data) as { id: string; name: string; code: string }[] ?? []).map((s) => [s.id, s]));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return normalizeSubscriptionList(unwrapPage(subs.data)).map((sub: any) => ({
+        ...sub,
+        organizationName: orgNames.get(sub.organizationId) ?? sub.organizationName,
+        serviceName: svcById.get(sub.serviceId)?.name ?? sub.serviceName,
+        serviceCode: svcById.get(sub.serviceId)?.code ?? sub.serviceCode,
+      }));
+    }),
   getSubscriptions: (orgId: string) =>
     api.get(`${V1}/shared-services/subscriptions/${orgId}`).then((r) => normalizeSubscriptionList(unwrapPage(r.data))),
   enableForOrg: (orgId: string, serviceId: string, callLimit?: number, enabledBy?: string) =>
@@ -691,12 +723,30 @@ export const backupService = {
 // ============================================================
 // Audit — AuditController /api/v1/audit
 // ============================================================
+export type AuditSearchParams = {
+  orgId?: string; action?: string; actor?: string;
+  status?: "SUCCESS" | "FAILURE" | "WARNING" | "";
+  entityType?: string;
+  from?: string; to?: string;
+  page?: number; size?: number;
+};
+
 export const auditService = {
-  search: (params?: {
-    orgId?: string; action?: string;
-    from?: string; to?: string;
-    page?: number; size?: number;
-  }) => api.get(`${V1}/audit`, { params }).then((r) => (unwrapPage(r.data) as unknown[]).map(normalizeAuditLog)),
+  search: (params?: AuditSearchParams) =>
+    api.get(`${V1}/audit`, { params }).then((r) => (unwrapPage(r.data) as unknown[]).map(normalizeAuditLog)),
+  /** Same search, but keeps the page metadata so the caller can paginate server-side. */
+  searchPaged: (params?: AuditSearchParams): Promise<import("@/types").PageOf<import("@/types").AuditEntry>> =>
+    api.get(`${V1}/audit`, { params }).then((r) => {
+      const d = r.data ?? {};
+      const content = Array.isArray(d.content) ? d.content : Array.isArray(d) ? d : [];
+      return {
+        content: content.map(normalizeAuditLog),
+        totalElements: d.totalElements ?? content.length,
+        totalPages: d.totalPages ?? 1,
+        number: d.number ?? 0,
+        size: d.size ?? content.length,
+      };
+    }),
   // Alias used by audit/page.tsx
   getLogs: (params?: object) =>
     api.get(`${V1}/audit`, { params }).then((r) => (unwrapPage(r.data) as unknown[]).map(normalizeAuditLog)),
@@ -710,10 +760,39 @@ export const auditService = {
 export const userService = {
   getAll: () => api.get(`${V1}/users`).then((r) => (unwrapPage(r.data) as unknown[]).map(normalizeUser)),
   getById: (id: string) => api.get(`${V1}/users/${id}`).then((r) => normalizeUser(r.data)),
-  create: (data: object) => api.post(`${V1}/users`, data).then((r) => r.data),
-  update: (id: string, data: object) => api.put(`${V1}/users/${id}`, data).then((r) => r.data),
+  /** The signed-in operator's own account. */
+  me: () => api.get(`${V1}/users/me`).then((r) => normalizeUser(r.data)),
+  create: (data: { name: string; email: string; password: string; role: string }) =>
+    api.post(`${V1}/users`, data).then((r) => normalizeUser(r.data)),
+  /** Name and role only — passwords go through resetPassword. */
+  update: (id: string, data: { name: string; email: string; role: string }) =>
+    api.put(`${V1}/users/${id}`, data).then((r) => normalizeUser(r.data)),
   disable: (id: string) => api.post(`${V1}/users/${id}/disable`).then((r) => r.data),
+  enable: (id: string) => api.post(`${V1}/users/${id}/enable`).then((r) => r.data),
+  unlock: (id: string) => api.post(`${V1}/users/${id}/unlock`).then((r) => r.data),
+  /** Step-up protected: the interceptor raises the re-auth dialog on STEP_UP_REQUIRED. */
+  resetPassword: (id: string, password: string) =>
+    api.post(`${V1}/users/${id}/reset-password`, { password }).then((r) => r.data),
   revokeSessions: (id: string) => api.post(`${V1}/users/${id}/revoke-sessions`).then((r) => r.data),
+  /** Everything one operator did, plus everything done to their account. */
+  activity: (id: string, page = 0, size = 25): Promise<import("@/types").PageOf<import("@/types").AuditEntry>> =>
+    api.get(`${V1}/users/${id}/activity`, { params: { page, size } }).then((r) => {
+      const d = r.data ?? {};
+      const content = Array.isArray(d.content) ? d.content : [];
+      return {
+        content: content.map(normalizeAuditLog),
+        totalElements: d.totalElements ?? content.length,
+        totalPages: d.totalPages ?? 1,
+        number: d.number ?? 0,
+        size: d.size ?? content.length,
+      };
+    }),
+  /** Rotate your own password. Revokes every session, this one included — sign in again after. */
+  changeMyPassword: (currentPassword: string, newPassword: string, mfaCode?: string) =>
+    api.post(`${V1}/users/me/password`, { currentPassword, newPassword, ...(mfaCode ? { mfaCode } : {}) }, { silent: true } as object)
+      .then((r) => r.data),
+  activitySummary: (hours = 24): Promise<import("@/types").OperatorActivitySummary> =>
+    api.get(`${V1}/users/activity/summary`, { params: { hours } }).then((r) => r.data),
 };
 
 // ============================================================
@@ -837,24 +916,59 @@ export const reportService = {
   getDeploymentStats: () =>
     api.get(`${V1}/reports/deployments`).then((r) => r.data),
   // Frontend compat aliases
-  getUsage: (_period?: string) =>
+  // The Reports page reads richer shapes (UsageReport / LicenseReport / DeploymentReport) than the
+  // three summary endpoints return. Every field the page dereferences is filled here — with the real
+  // number where the backend has one, and an honest zero/empty where it keeps no such history — so
+  // a missing field can never crash the page (Object.entries(undefined) used to).
+  getUsage: (period?: string) =>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    api.get(`${V1}/reports/summary`).then((r): any => {
+    Promise.all([api.get(`${V1}/reports/summary`), api.get(`${V1}/reports/modules`)]).then(([r, m]): any => {
       const s = r.data ?? {};
       return {
         ...s,
-        moduleUsage: Array.isArray(s.moduleUsage) ? s.moduleUsage : [],
-        deploymentsByEnv: Array.isArray(s.deploymentsByEnv) ? s.deploymentsByEnv : [],
+        period: period ?? "30d",
+        totalOrganizations: s.totalOrganizations ?? 0,
+        activeOrganizations: s.activeOrganizations ?? 0,
         totalUsers: s.totalUsers ?? 0,
+        activeUsers: s.activeUsers ?? 0,
         totalApiCalls: s.totalApiCalls ?? 0,
+        moduleUsage: Array.isArray(m.data) ? m.data : [],
+        deploymentsByEnv: s.deploymentsByEnv && !Array.isArray(s.deploymentsByEnv)
+          ? s.deploymentsByEnv
+          : { PRODUCTION: s.productionOrgs ?? 0, STAGING: s.stagingOrgs ?? 0, DEVELOPMENT: 0 },
+        newOrganizations: s.newOrganizations ?? 0,
+        churnedOrganizations: s.churnedOrganizations ?? 0,
       };
     }),
   getLicense: () =>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    api.get(`${V1}/reports/modules`).then((r): any => ({ byModule: Array.isArray(r.data) ? r.data : [] })),
+    Promise.all([api.get(`${V1}/reports/modules`), api.get(`${V1}/reports/summary`)]).then(([m, r]): any => {
+      const s = r.data ?? {};
+      return {
+        byModule: Array.isArray(m.data) ? m.data : [],
+        totalLicenses: s.totalLicenses ?? 0,
+        activeLicenses: s.activeLicenses ?? 0,
+        expiredLicenses: s.expiredLicenses ?? 0,
+        expiringIn30Days: s.expiringIn30Days ?? 0,
+        expiringIn90Days: s.expiringIn90Days ?? 0,
+      };
+    }),
   getDeployments: () =>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    api.get(`${V1}/reports/deployments`).then((r): any => ({ timeline: Array.isArray(r.data) ? r.data : [] })),
+    Promise.all([api.get(`${V1}/reports/deployments`), api.get(`${V1}/reports/summary`)]).then(([d, r]): any => {
+      const s = r.data ?? {};
+      const byStatus: { status: string; count: number }[] = Array.isArray(d.data) ? d.data : [];
+      return {
+        totalDeployments: s.totalDeployments ?? byStatus.reduce((a, x) => a + (x.count ?? 0), 0),
+        successfulDeployments: s.successfulDeployments ?? 0,
+        failedDeployments: s.failedDeployments ?? 0,
+        averageDurationMinutes: 0,   // not tracked by the backend
+        rollbackCount: s.rolledBack ?? 0,
+        deploymentsPerVersion: {},   // not tracked by the backend
+        timeline: [],                // no per-day history is retained
+        byStatus,
+      };
+    }),
   exportPdf: (type = "summary") =>
     api.get(`${V1}/reports/export/pdf`, { params: { type }, responseType: "blob" }).then((r) => r.data),
   exportCsv: (type = "summary") =>
