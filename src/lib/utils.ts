@@ -1,4 +1,5 @@
 import { type ClassValue, clsx } from "clsx";
+import { readOperator } from "@/lib/session";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -37,37 +38,22 @@ export function truncate(str: string, len: number) {
 export type CurrentUser = { email: string; role: "SUPER_ADMIN" | "ADMIN" | "SUPPORT" | "VIEWER" | "" };
 
 /**
- * The signed-in operator as the JWT describes them (display/gating only — the server enforces).
- * The role claim is the Spring authority (`ROLE_ADMIN`); it is normalised here so callers can
- * compare against the plain role names the API uses everywhere else.
+ * The signed-in operator (display/gating only — the server enforces).
+ *
+ * Read from the operator cookie rather than by decoding the token, which the page can no longer see:
+ * see src/lib/session.ts. The role arrives as the Spring authority (`ROLE_ADMIN`) and is normalised
+ * here so callers can compare against the plain role names the API uses everywhere else.
  */
 export function getCurrentUser(): CurrentUser {
-  try {
-    const token = typeof window !== "undefined" ? localStorage.getItem("controlcenter_token") : null;
-    if (!token) return { email: "", role: "" };
-    const payload = token.split(".")[1];
-    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
-    const claims = JSON.parse(json);
-    const raw = String(claims?.role ?? "").replace(/^ROLE_/, "");
-    const role = (["SUPER_ADMIN", "ADMIN", "SUPPORT", "VIEWER"].includes(raw) ? raw : "") as CurrentUser["role"];
-    return { email: claims?.email || claims?.sub || "", role };
-  } catch {
-    return { email: "", role: "" };
-  }
+  const operator = readOperator();
+  const raw = operator.role.replace(/^ROLE_/, "");
+  const role = (["SUPER_ADMIN", "ADMIN", "SUPPORT", "VIEWER"].includes(raw) ? raw : "") as CurrentUser["role"];
+  return { email: operator.email, role };
 }
 
 export const ROLE_RANK: Record<string, number> = { VIEWER: 0, SUPPORT: 1, ADMIN: 2, SUPER_ADMIN: 3 };
 
-/** Get the current user's email from the JWT token in localStorage */
+/** The current operator's email, for the "changed by" fields. "system" when there is no session. */
 export function getCurrentUserEmail(): string {
-  try {
-    const token = typeof window !== "undefined" ? localStorage.getItem("controlcenter_token") : null;
-    if (!token) return "system";
-    const payload = token.split(".")[1];
-    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
-    const claims = JSON.parse(json);
-    return claims?.email || claims?.sub || "system";
-  } catch {
-    return "system";
-  }
+  return readOperator().email || "system";
 }

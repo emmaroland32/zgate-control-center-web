@@ -39,10 +39,9 @@ function Callback() {
 
     ssoService
       .callback(code, state)
-      .then((data) => {
-        const token: string = data.accessToken || data.token;
-        localStorage.setItem("controlcenter_token", token);
-        document.cookie = `controlcenter_token=${token}; path=/; SameSite=Strict; max-age=86400`;
+      .then(() => {
+        // ssoService.callback goes through /api/cc-session/sso, which exchanges the code server-side
+        // and keeps the token in an httpOnly cookie. Nothing to store here.
         router.replace("/");
       })
       .catch((e) => setError(apiError(e, "Single sign-on failed")));

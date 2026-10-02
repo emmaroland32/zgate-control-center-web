@@ -37,13 +37,9 @@ function LoginForm() {
     e.preventDefault();
     setLoading(true);
     try {
-      const data = await authService.login(email, password, mfaCode || undefined);
-      const token: string = data.accessToken || data.token;
-
-      // Persist in localStorage for Axios interceptor
-      localStorage.setItem("controlcenter_token", token);
-      // Also set a cookie so middleware can protect routes server-side
-      document.cookie = `controlcenter_token=${token}; path=/; SameSite=Strict; max-age=86400`;
+      // The token is never seen here: /api/cc-session/login makes the call server-side and puts it in
+      // an httpOnly cookie, answering with the operator's email and role for the pages to draw with.
+      await authService.login(email, password, mfaCode || undefined);
 
       toast.success("Welcome to ZGATE Control Center");
       const next = params.get("next") || "/";

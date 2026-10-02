@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { endSession, readOperator } from "@/lib/session";
 import { useState, useEffect } from "react";
 import {
   LayoutDashboard, Building2, ShieldCheck, Rocket, Handshake,
@@ -12,16 +13,10 @@ import {
   Cpu, Receipt, Gauge, ShieldAlert, HardDriveDownload, CloudCog, Radar,
 } from "lucide-react";
 
-/** Decode the JWT payload (base64) without verifying — display only */
-function decodeToken(token: string): { name?: string; email?: string; role?: string; sub?: string } | null {
-  try {
-    const payload = token.split(".")[1];
-    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
-    return JSON.parse(json);
-  } catch {
-    return null;
-  }
-}
+/*
+ * The operator used to be read by decoding the JWT out of localStorage. The token is httpOnly now, so
+ * the display claims come from the operator cookie instead — see src/lib/session.ts.
+ */
 
 const DEFAULT_USER = { initials: "—", name: "Not signed in", email: "", role: "ADMIN" };
 
@@ -29,14 +24,12 @@ function useCurrentUser() {
   const [user, setUser] = useState(DEFAULT_USER);
 
   useEffect(() => {
-    const token = localStorage.getItem("controlcenter_token");
-    if (!token) return;
-    const claims = decodeToken(token);
-    const email = claims?.email || claims?.sub || "";
-    const name = claims?.name || email.split("@")[0] || "Operator";
+    const { email, role: authority } = readOperator();
+    if (!email && !authority) return;
+    const name = email.split("@")[0] || "Operator";
     // The claim is the Spring authority ("ROLE_SUPER_ADMIN"); the rank table uses plain names.
     // Without stripping the prefix every rank lookup missed and the admin links vanished for all.
-    const role = String(claims?.role || "").replace(/^ROLE_/, "") || "VIEWER";
+    const role = authority.replace(/^ROLE_/, "") || "VIEWER";
     const initials = name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
     setUser({ initials, name, email, role });
   }, []);
@@ -206,12 +199,7 @@ export default function Sidebar() {
           </div>
         </div>
         <button
-          onClick={() => {
-            localStorage.removeItem("controlcenter_token");
-            // Clear the middleware cookie too
-            document.cookie = "controlcenter_token=; path=/; max-age=0";
-            window.location.href = "/login";
-          }}
+          onClick={() => { void endSession(); }}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-controlcenter-300
                      hover:bg-white/5 hover:text-white transition-colors"
         >

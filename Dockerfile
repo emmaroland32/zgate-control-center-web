@@ -12,9 +12,13 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# NEXT_PUBLIC_* is inlined into the client bundle at build time, so this must be
-# the URL the BROWSER uses to reach the backend (the published host port), not
-# the internal compose service name.
+# The browser no longer calls the backend directly — it calls same-origin /api/cc and the BFF
+# attaches the operator's token server-side (src/server/bff/cc-proxy.ts). Set CC_BACKEND_URL at
+# RUNTIME to the address the server uses; in compose that is the internal service name.
+#
+# This build arg remains only as the fallback the proxy uses when CC_BACKEND_URL is unset, and it is
+# the wrong value inside a container (NEXT_PUBLIC_* is inlined at build time with the URL the BROWSER
+# would use). Nothing in the client bundle reads it any more.
 ARG NEXT_PUBLIC_API_URL=http://localhost:8090
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_TELEMETRY_DISABLED=1

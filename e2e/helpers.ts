@@ -1,4 +1,5 @@
 import { expect, type Page, type Locator } from "@playwright/test";
+import { randomInt } from "node:crypto";
 
 /**
  * Shared helpers for the Control Center browser suites. Every suite runs against a REAL stack:
@@ -15,14 +16,37 @@ export function requireCredentials() {
  * Sign the operator in and land on a protected page.
  *
  * POST /auth/login is rate-limited to 10 requests per minute per IP, and a suite of ~50 tests each
- * signing in through the form would be throttled after the first minute. So the FIRST call in a
- * worker signs in through the real login form and remembers the issued token; later calls verify
- * that token against the API and inject it into the fresh browser context exactly the way the
- * login page does (localStorage + cookie), falling back to the form whenever the token is missing,
- * rejected, or for a different operator. Set E2E_LOGIN_EVERY_TEST=1 to force the form every time.
- * A 429 from the form is waited out (Retry-After) and retried once.
+ * signing in would be throttled after the first minute. So the FIRST call in a worker signs in once
+ * against the API and remembers the token; later calls verify it and inject it into the fresh browser
+ * context, falling back to a fresh sign-in whenever the token is missing, rejected, or for a different
+ * operator. Set E2E_LOGIN_EVERY_TEST=1 to sign in every time.
+ *
+ * The cookies injected here are what the app itself sets (src/app/api/cc-session): the httpOnly token
+ * the BFF reads, and the operator claims the pages draw with. Nothing is put in localStorage — the
+ * token is no longer readable by the page, which is the point of the BFF, so a test cannot get it from
+ * there either and the worker-level cache is where it lives for the suite.
  */
-let cachedSession: { email: string; token: string } | null = null;
+let cachedSession: { email: string; token: string; role: string } | null = null;
+
+/** Sign in against the API directly, the way the session route does, to get a token for injection. */
+async function apiSignIn(page: Page, email: string, password: string): Promise<{ token: string; role: string } | null> {
+  const res = await page.request.post(`${API}/auth/login`, {
+    headers: { "Content-Type": "application/json" },
+    data: JSON.stringify({ email, password }),
+  });
+  if (!res.ok()) return null;
+  const json = await res.json().catch(() => null);
+  const issued = json?.data ?? json;
+  return issued?.token ? { token: issued.token, role: issued.role ?? "" } : null;
+}
+
+async function injectSession(page: Page, session: { token: string; role: string }, email: string) {
+  const url = page.url().startsWith("http") ? page.url() : (process.env.E2E_BASE_URL || "http://localhost:3002");
+  await page.context().addCookies([
+    { name: "controlcenter_token", value: session.token, url, sameSite: "Strict" },
+    { name: "controlcenter_user", value: encodeURIComponent(JSON.stringify({ email, role: session.role })), url, sameSite: "Strict" },
+  ]);
+}
 
 export async function signIn(page: Page, email = EMAIL, password = PASSWORD) {
   if (process.env.E2E_LOGIN_EVERY_TEST !== "1" && cachedSession?.email === email) {
@@ -30,17 +54,21 @@ export async function signIn(page: Page, email = EMAIL, password = PASSWORD) {
       headers: { Authorization: `Bearer ${cachedSession.token}` },
     });
     if (probe.ok()) {
-      const token = cachedSession.token;
-      await page.context().addCookies([{ name: "controlcenter_token", value: token, url: page.url().startsWith("http") ? page.url() : (process.env.E2E_BASE_URL || "http://localhost:3002"), sameSite: "Strict" }]);
-      await page.addInitScript((t) => localStorage.setItem("controlcenter_token", t), token);
+      await injectSession(page, cachedSession, email);
       await page.goto("/");
       if (!page.url().includes("/login")) return;
     }
     cachedSession = null;
   }
+  const issued = await apiSignIn(page, email, password);
+  if (issued) {
+    cachedSession = { email, ...issued };
+    await injectSession(page, issued, email);
+    await page.goto("/");
+    if (!page.url().includes("/login")) return;
+  }
+  // Last resort: drive the real form, which is also what the suites testing the form itself use.
   await signInViaForm(page, "/login", email, password);
-  const token = await page.evaluate(() => localStorage.getItem("controlcenter_token"));
-  if (token) cachedSession = { email, token };
 }
 
 /** Drive the real login form at `path` (e.g. "/login?next=/releases"), waiting out a 429 once. */
@@ -50,7 +78,10 @@ export async function signInViaForm(page: Page, path: string, email = EMAIL, pas
     await page.locator('input[type="email"]').fill(email);
     await page.locator('input[type="password"]').fill(password);
     const [response] = await Promise.all([
-      page.waitForResponse((r) => r.url().endsWith("/auth/login") && r.request().method() === "POST", { timeout: 20_000 }),
+      // The form posts to the session route now, which signs in server-side; the backend's own path
+      // is still matched so this helper works against either.
+      page.waitForResponse((r) => /\/(auth\/login|cc-session\/login)$/.test(new URL(r.url()).pathname)
+        && r.request().method() === "POST", { timeout: 20_000 }),
       page.locator('button[type="submit"]').click(),
     ]);
     if (response.status() === 429 && attempt === 0) {
@@ -63,11 +94,9 @@ export async function signInViaForm(page: Page, path: string, email = EMAIL, pas
   }
 }
 
+/** Clear the session. Through the context, because the token cookie is httpOnly and a page cannot. */
 export async function signOut(page: Page) {
-  await page.evaluate(() => {
-    localStorage.removeItem("controlcenter_token");
-    document.cookie = "controlcenter_token=; path=/; max-age=0";
-  });
+  await page.context().clearCookies();
 }
 
 /** Navigate and assert the page heading; fails fast on the generic error banner. */
@@ -100,9 +129,17 @@ export async function expectToast(page: Page, text: string | RegExp) {
   await expect(page.getByText(text).first()).toBeVisible();
 }
 
-/** A bearer token for direct API calls from a test (fixtures, cleanup). */
+/**
+ * A bearer token for direct API calls from a test (fixtures, cleanup).
+ *
+ * From the worker's cache, not from the browser: the page cannot read the token any more. Signs in if
+ * the cache is cold, so a spec that reaches for the API before signIn() still works.
+ */
 export async function apiToken(page: Page): Promise<string> {
-  return (await page.evaluate(() => localStorage.getItem("controlcenter_token"))) ?? "";
+  if (cachedSession) return cachedSession.token;
+  const issued = await apiSignIn(page, EMAIL, PASSWORD);
+  if (issued) cachedSession = { email: EMAIL, ...issued };
+  return issued?.token ?? "";
 }
 
 export const API = process.env.E2E_API_URL ?? "http://localhost:8090/api/v1";
@@ -161,3 +198,93 @@ export async function clickWithStepUp(page: Page, target: Locator, password = PA
   await confirmStepUp(page, password);
   await target.click();
 }
+
+// ── Shared by the identity suites (mfa, sessions-and-roles) ───────────────────────────────────────
+
+export const BASE_URL = process.env.E2E_BASE_URL || "http://localhost:3002";
+
+/** The throwaway VIEWER operator owned by admin-management.spec; left disabled between runs. */
+export const OPERATOR = { email: "e2e.operator@example.test", name: "E2E Operator" } as const;
+
+export interface Operator {
+  id: string; name: string; email: string; role: string; active: boolean; mfaEnabled: boolean;
+  locked: boolean; failedLoginAttempts: number;
+}
+
+/** A password that satisfies the server policy (length, mixed case, digit, symbol); never logged. */
+export function generatePassword(length = 20): string {
+  const lower = "abcdefghjkmnpqrstuvwxyz", upper = "ABCDEFGHJKLMNPQRSTUVWXYZ", digits = "23456789", symbols = "!@#$%^&*-_=+?";
+  const pool = lower + upper + digits + symbols;
+  const pick = (s: string) => s[randomInt(s.length)];
+  const chars = [pick(lower), pick(upper), pick(digits), pick(symbols)];
+  while (chars.length < length) chars.push(pick(pool));
+  for (let i = chars.length - 1; i > 0; i--) { const j = randomInt(i + 1); [chars[i], chars[j]] = [chars[j], chars[i]]; }
+  return chars.join("");
+}
+
+export async function findOperator(page: Page): Promise<Operator | null> {
+  const list = await api(page, "GET", "/users");
+  const users: Operator[] = Array.isArray(list.data) ? list.data : [];
+  return users.find((u) => u.email.toLowerCase() === OPERATOR.email) ?? null;
+}
+
+/** The throwaway operator, created (VIEWER, active) through the API when admin-management.spec has not run. */
+export async function ensureOperator(page: Page): Promise<Operator> {
+  const found = await findOperator(page);
+  if (found) return found;
+  const created = await api(page, "POST", "/users", { name: OPERATOR.name, email: OPERATOR.email, password: generatePassword(), role: "VIEWER" });
+  if (created.status >= 300 || !created.data?.id) {
+    throw new Error(`Could not create ${OPERATOR.email}: HTTP ${created.status} ${created.message ?? ""}`);
+  }
+  return created.data as Operator;
+}
+
+/** A single-use step-up ticket bound to one action ("POST /api/v1/…"), for API-driven fixtures. */
+export async function stepUpTicket(page: Page, action: string, password = PASSWORD): Promise<string> {
+  const r = await api(page, "POST", "/auth/step-up", { password, action });
+  if (r.status >= 300 || !r.data?.ticket) throw new Error(`Step-up refused: HTTP ${r.status} ${r.message ?? ""}`);
+  return r.data.ticket as string;
+}
+
+function expectOk(r: { status: number; message?: string }, what: string) {
+  if (r.status >= 300) throw new Error(`${what} failed: HTTP ${r.status} ${r.message ?? ""}`);
+}
+
+/**
+ * Put the throwaway operator into a known state through the API as the signed-in SUPER_ADMIN:
+ * clear any lockout, optionally set a fresh password (step-up ticket + reset, which also revokes
+ * the operator's sessions), then leave the account enabled or disabled as asked.
+ */
+export async function prepareOperator(page: Page, opts: { enabled: boolean; password?: string }): Promise<Operator> {
+  const op = await ensureOperator(page);
+  if (op.locked || op.failedLoginAttempts > 0) expectOk(await api(page, "POST", `/users/${op.id}/unlock`), "unlock");
+  if (op.mfaEnabled) {
+    // Break-glass reset (step-up bound to the action) so a password-only sign-in works again.
+    const action = `POST /api/v1/users/${op.id}/mfa/disable`;
+    const ticket = await stepUpTicket(page, action);
+    expectOk(await api(page, "POST", `/users/${op.id}/mfa/disable`, undefined, { "X-StepUp-Ticket": ticket }), "mfa-disable");
+    op.mfaEnabled = false;
+  }
+  if (opts.password) {
+    if (!op.active) expectOk(await api(page, "POST", `/users/${op.id}/enable`), "enable");
+    const action = `POST /api/v1/users/${op.id}/reset-password`;
+    const ticket = await stepUpTicket(page, action);
+    expectOk(await api(page, "POST", `/users/${op.id}/reset-password`, { password: opts.password }, { "X-StepUp-Ticket": ticket }), "reset-password");
+    op.active = true;
+  }
+  if (opts.enabled && !op.active) expectOk(await api(page, "POST", `/users/${op.id}/enable`), "enable");
+  if (!opts.enabled && op.active) expectOk(await api(page, "POST", `/users/${op.id}/disable`), "disable");
+  return { ...op, active: opts.enabled, locked: false, failedLoginAttempts: 0, mfaEnabled: false };
+}
+
+/**
+ * The control under a plain, non-associated `<label class="label">` (the FormField pattern used
+ * everywhere outside Admin Management): the label's parent's first input/select/textarea. A
+ * required-field asterisk rendered inside the label is tolerated.
+ */
+export const fieldByLabel = (scope: Page | Locator, label: string): Locator =>
+  scope
+    .locator("label.label", { hasText: new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\*?$`) })
+    .locator("xpath=..")
+    .locator("input, select, textarea")
+    .first();

@@ -1,4 +1,5 @@
 import { test, expect, type Page, type Locator } from "@playwright/test";
+import { signInViaForm, prepareOperator } from "./helpers";
 
 /**
  * Admin Management, driven through the real console against the real API.
@@ -15,12 +16,9 @@ test.beforeAll(() => {
   if (!EMAIL || !PASSWORD) throw new Error("Set E2E_EMAIL and E2E_PASSWORD to a SUPER_ADMIN operator");
 });
 
+/** Always the real form (this suite exercises sign-in itself); a 429 from the 10/min limit is waited out once. */
 async function signIn(page: Page, email: string, password: string) {
-  await page.goto("/login");
-  await page.locator('input[type="email"]').fill(email);
-  await page.locator('input[type="password"]').fill(password);
-  await page.locator('button[type="submit"]').click();
-  await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 20_000 });
+  await signInViaForm(page, "/login", email, password);
 }
 
 async function signOut(page: Page) {
@@ -180,6 +178,9 @@ test.describe.serial("Admin Management", () => {
   });
 
   test("reset password needs step-up; the operator then signs in and changes it themselves", async ({ page }) => {
+    // An aborted mfa run can leave the fixture with two-factor on, which would turn the password
+    // sign-in below into a code prompt: put it back to a known, enabled, password-only state.
+    await prepareOperator(page, { enabled: true });
     await openAdminManagement(page);
     await search(page, THROWAWAY);
     await expect(rowFor(page, THROWAWAY)).toHaveCount(1);

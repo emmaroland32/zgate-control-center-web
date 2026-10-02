@@ -5,9 +5,15 @@ name: Deploy to AWS ECR, EC2
 # AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, SSH_HOST, SSH_USER, SSH_PRIVATE_KEY,
 # SSH_PORT (optional), DEPLOY_PATH.
 #
-# NEXT_PUBLIC_API_URL is a BROWSER value baked at BUILD time, so it is passed as a
-# build-arg here (NOT a server env). Change it via repo variable NEXT_PUBLIC_API_URL;
-# changing it requires a rebuild, not just a restart.
+# The browser no longer calls the CC API directly: it calls same-origin /api/cc and the BFF
+# (web/src/server/bff/cc-proxy.ts) attaches the operator's token server-side. So the value that
+# matters at RUNTIME is CC_BACKEND_URL, set in the host's docker-compose.yml (or its .env) — the
+# internal address, http://controlcenter-backend:8090. With it unset the proxy falls back to the
+# baked NEXT_PUBLIC_API_URL, which still resolves (it is the public API host) but sends every call out
+# and back in through the edge instead of across the docker network.
+#
+# NEXT_PUBLIC_API_URL remains a BUILD-time build-arg because that is how NEXT_PUBLIC_* works; nothing
+# in the client bundle reads it any more. Change it via repo variable NEXT_PUBLIC_API_URL.
 
 on:
   push:

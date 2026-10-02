@@ -1,22 +1,35 @@
 /**
  * ZGATE Control Center — API Service Layer
- * Base URL: NEXT_PUBLIC_API_URL (default: http://localhost:8090)
- * All paths match com.zgate.controlcenter.controller.* at /api/v1/
+ *
+ * Base URL: same-origin `/api/cc`, served by the BFF (src/server/bff/cc-proxy.ts), which attaches the
+ * operator's token from the httpOnly session cookie. The browser holds no token: it used to keep one in
+ * localStorage and set the Bearer here, where any script in the page could take it.
+ *
+ * Paths below are unchanged — they still match com.zgate.controlcenter.controller.* at /api/v1/,
+ * because the proxy forwards whatever follows /api/cc.
  */
 
 import axios, { AxiosInstance } from "axios";
 import { toast } from "sonner";
+import { CSRF_HEADER } from "@/lib/bff";
+import { endSession } from "@/lib/session";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8090";
+const BASE_URL = "/api/cc";
 const V1 = "/api/v1";
+
+/** Where a session is opened or closed. Not the backend's path: see src/app/api/cc-session. */
+const SESSION = "/api/cc-session";
 
 function createClient(): AxiosInstance {
   const client = axios.create({ baseURL: BASE_URL, timeout: 20000 });
 
   client.interceptors.request.use((config) => {
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("controlcenter_token");
-      if (token) config.headers.Authorization = `Bearer ${token}`;
+      // No Authorization header: the BFF attaches the token server-side. What this has to prove
+      // instead is that the request came from our own pages, since a cookie travels either way.
+      // Set the same way the step-up ticket below is, rather than through Object.assign: config.headers
+      // is an AxiosHeaders instance, not a plain object.
+      config.headers[CSRF_HEADER] = "1";
       const ticket = currentStepUpTicket();
       if (ticket) config.headers["X-StepUp-Ticket"] = ticket;
     }
@@ -67,16 +80,19 @@ function createClient(): AxiosInstance {
         stepUpTicket = null;
         const cfg = err.config ?? {};
         const method = String(cfg.method ?? "post").toUpperCase();
-        let path = String(cfg.url ?? "");
-        try { path = new URL(path, cfg.baseURL || BASE_URL).pathname; } catch { /* keep as given */ }
+        // The server binds the ticket to exactly this method + path, so it has to be the BACKEND's
+        // path. cfg.url already is one (the proxy prefix lives in baseURL), so take it as given and
+        // drop any query string — only the path is part of the binding.
+        const path = String(cfg.url ?? "").split("?")[0];
         window.dispatchEvent(new CustomEvent("zgate:step-up-required", { detail: { action: `${method} ${path}` } }));
       }
 
-      const isLogin = (err.config?.url ?? "").includes("/auth/login");
-      if (err.response?.status === 401 && !isLogin && typeof window !== "undefined") {
-        localStorage.removeItem("controlcenter_token");
-        document.cookie = "controlcenter_token=; path=/; max-age=0";
-        window.location.href = "/login";
+      // Both spellings: the backend's own path, and the session route that now fronts it. Matching
+      // only one would turn a bad-credentials 401 into a redirect that swallows the message.
+      const url = String(err.config?.url ?? "");
+      const isSignIn = url.includes("/auth/login") || url.startsWith(SESSION);
+      if (err.response?.status === 401 && !isSignIn && typeof window !== "undefined") {
+        void endSession();
       }
       return Promise.reject(err);
     }
@@ -403,8 +419,13 @@ export const authService = {
     api.post(`${V1}/auth/step-up`, { password, ...(mfaCode ? { mfaCode } : {}), ...(action ? { action } : {}) })
       .then((r) => r.data),
 
-  login: (email: string, password: string, mfaCode?: string) =>
-    api.post(`${V1}/auth/login`, { email, password, ...(mfaCode ? { mfaCode } : {}) }).then((r) => r.data),
+  /**
+   * Sign in. Answers with the operator's email and role only — the token stays in the httpOnly cookie
+   * the session route sets, which is the whole point. The backend's refusals come through untouched,
+   * so the sign-in page still reads MFA_REQUIRED and ACCOUNT_LOCKED off them.
+   */
+  login: (email: string, password: string, mfaCode?: string): Promise<{ email: string; role: string }> =>
+    api.post(`${SESSION}/login`, { email, password, ...(mfaCode ? { mfaCode } : {}) }).then((r) => r.data),
 };
 
 /**
@@ -415,15 +436,15 @@ export const ssoService = {
   status: (): Promise<{ enabled: boolean }> =>
     api.get(`${V1}/auth/oidc/status`).then((r) => r.data),
 
-  // withCredentials on both: the backend binds the sign-in to a per-browser HttpOnly cookie, and
-  // a cross-origin XHR neither stores nor returns that cookie without it. CORS already allows
-  // credentials against an explicit origin list, so this needs no server change.
+  // The backend binds the sign-in to a per-browser HttpOnly cookie (cc_sso_state). These calls are
+  // same-origin now, so the browser sends it without being asked; the BFF relays it to the backend
+  // and relays the backend's Set-Cookie back. withCredentials is no longer needed for it.
   authorize: (): Promise<{ authorizationUrl: string }> =>
-    api.get(`${V1}/auth/oidc/authorize`, { withCredentials: true }).then((r) => r.data),
+    api.get(`${V1}/auth/oidc/authorize`).then((r) => r.data),
 
-  callback: (code: string, state: string) =>
-    api.post(`${V1}/auth/oidc/callback`, { code, state }, { withCredentials: true })
-      .then((r) => r.data),
+  /** Completes the sign-in through the session route, so the token it yields stays on the server. */
+  callback: (code: string, state: string): Promise<{ email: string; role: string }> =>
+    api.post(`${SESSION}/sso`, { code, state }).then((r) => r.data),
 };
 
 export type SecurityPolicy = {

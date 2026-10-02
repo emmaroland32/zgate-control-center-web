@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { SESSION_COOKIE } from "@/lib/bff";
 
 // The SSO callback runs BEFORE a token exists — the whole point of it is to obtain one. Without
 // it here the middleware bounces the operator back to /login and the code is never exchanged.
@@ -15,7 +16,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = request.cookies.get("controlcenter_token")?.value;
+  // httpOnly, so only this and the BFF can see it — see src/server/bff/cc-proxy.ts.
+  const token = request.cookies.get(SESSION_COOKIE)?.value;
 
   if (!token) {
     const loginUrl = new URL("/login", request.url);

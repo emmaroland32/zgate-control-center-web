@@ -11,6 +11,7 @@ import {
   userService, mfaService, auditService, securityPolicyService, apiError, type SecurityPolicy,
 } from "@/services/controlcenter.service";
 import { timeAgo, formatDate, formatDateTime, getCurrentUser, ROLE_RANK, cn } from "@/lib/utils";
+import { endSession } from "@/lib/session";
 import type { ControlCenterUser, OperatorRole, AuditEntry, OperatorActivitySummary } from "@/types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -366,9 +367,7 @@ function ChangeMyPasswordDialog({ policy, onClose }: { policy: SecurityPolicy | 
       await userService.changeMyPassword(current, next, mfaCode || undefined);
       toast.success("Password changed. Sign in again with the new one.");
       // Every session was revoked server-side, this one included — go to the sign-in page cleanly.
-      localStorage.removeItem("controlcenter_token");
-      document.cookie = "controlcenter_token=; path=/; max-age=0";
-      window.location.href = "/login";
+      await endSession();
       return;
     } catch (err) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -416,7 +415,7 @@ function ChangeMyPasswordDialog({ policy, onClose }: { policy: SecurityPolicy | 
   );
 }
 
-function MfaEnrollDialog({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+function MfaEnrollDialog({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState<"start" | "verify">("start");
   const [currentCode, setCurrentCode] = useState("");
   const [needsCurrent, setNeedsCurrent] = useState(false);
@@ -441,8 +440,14 @@ function MfaEnrollDialog({ onClose, onDone }: { onClose: () => void; onDone: () 
   async function activate(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    try { await mfaService.activate(code); onDone(); onClose(); }
-    catch (err) { toast.error(apiError(err)); }
+    try {
+      await mfaService.activate(code);
+      toast.success("Two-factor authentication is now required for your sign-in. Sign in again with a code from your app.");
+      // Activation revokes every session opened before two-factor — this one included. Leave
+      // cleanly instead of letting the next request bounce to the sign-in page unexplained.
+      await endSession();
+      return;
+    } catch (err) { toast.error(apiError(err)); }
     setBusy(false);
   }
 
@@ -928,7 +933,7 @@ export default function AdminManagementPage() {
 
       {/* Dialogs & drawer */}
       {showAdd && <AddUserDialog policy={policy} canGrantSuper={isSuper} onClose={() => setShowAdd(false)} onCreated={(u) => setUsers((prev) => [u, ...prev])} />}
-      {showEnroll && <MfaEnrollDialog onClose={() => setShowEnroll(false)} onDone={load} />}
+      {showEnroll && <MfaEnrollDialog onClose={() => setShowEnroll(false)} />}
       {showChangePw && <ChangeMyPasswordDialog policy={policy} onClose={() => setShowChangePw(false)} />}
       {editing && (
         <EditUserDialog user={editing} canGrantSuper={isSuper} isSelf={editing.email.toLowerCase() === me.email.toLowerCase()}
