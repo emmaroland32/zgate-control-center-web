@@ -38,6 +38,7 @@ import {
   ChevronUp,
   Fingerprint,
   PartyPopper,
+  PiggyBank,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { releaseService, licenseService, databaseService, apiError } from "@/services/controlcenter.service";
@@ -98,6 +99,7 @@ const MODULES: {
   { id: "MUTUAL_FUND",      name: "Mutual Fund",        description: "Mutual fund NAV, orders and distributions",    icon: <DollarSign size={18} />,    color: "bg-yellow-500",  core: false, requires: ["CRM", "COMPLIANCE"] },
   { id: "BANKING",          name: "Banking",            description: "Banking accounts and transaction processing",   icon: <Building2 size={18} />,     color: "bg-slate-600",   core: false, requires: ["CRM"] },
   { id: "DISTRIBUTION",     name: "Distribution",       description: "Distribution network and channel management",  icon: <Globe size={18} />,         color: "bg-pink-500",    core: false, requires: ["CRM"] },
+  { id: "FIXED_DEPOSIT",    name: "Fixed Deposits",     description: "Customer term deposits and the funding they provide", icon: <PiggyBank size={18} />, color: "bg-green-600", core: false, requires: ["CRM", "PORTFOLIO"] },
 ];
 
 const MODULE_BUNDLES = [

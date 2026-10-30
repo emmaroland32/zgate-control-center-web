@@ -24,6 +24,7 @@ import {
   DollarSign,
   Landmark,
   Users,
+  Wallet,
 } from "lucide-react";
 import { licenseService, organizationService, apiError } from "@/services/controlcenter.service";
 import type { License, Organization } from "@/types";
@@ -44,6 +45,7 @@ const ALL_MODULES = [
   { id: "MUTUAL_FUND",   name: "Mutual Fund",    icon: DollarSign,    description: "Unit trust and mutual fund administration" },
   { id: "BANKING",       name: "Banking",        icon: Building2,     description: "Core banking and account management" },
   { id: "DISTRIBUTION",  name: "Distribution",   icon: Package,       description: "Distribution channels and advisor management" },
+  { id: "FIXED_DEPOSIT", name: "Fixed Deposits", icon: Wallet,        description: "Customer term deposits: products, placements and the funding they provide" },
 ] as const;
 
 type ModuleId = typeof ALL_MODULES[number]["id"];
