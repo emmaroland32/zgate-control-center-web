@@ -158,19 +158,31 @@ jobs:
             # script BEFORE the message below can print. `ps -q` matches only RUNNING containers
             # and returns non-zero when there are none, so a service that starts and dies gives a
             # silent "exited with status 1". Fall back to `-aq` so the state check can show logs.
-            cid=$(sudo docker compose ps -q controlcenter-web || true)
+            cid=$(sudo docker compose ps -q controlcenter-web 2>/dev/null | head -n1 || true)
             if [ -z "$cid" ]; then
-              cid=$(sudo docker compose ps -aq controlcenter-web || true)
+              cid=$(sudo docker compose ps -aq controlcenter-web 2>/dev/null | head -n1 || true)
             fi
             if [ -z "$cid" ]; then
               echo "[deploy] no container for controlcenter-web after up -d"
               exit 1
             fi
+            # xtrace over the health gate. Two different bugs here have now ended this step
+            # with exit 1 and no message — a `case` arm on 2026-10-27 and something in this
+            # window on 2026-10-31 — and between them they left the deploy red for four days
+            # while it was in fact working, which hid a disk at 100%. In a deploy log, saying
+            # which command is being run is worth the noise.
+            set -x
             settled=0
             ok=0
             for i in $(seq 1 30); do
-              state=$(sudo docker inspect -f '{{.State.Status}}' "$cid")
-              health=$(sudo docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$cid")
+              state=$(sudo docker inspect -f '{{.State.Status}}' "$cid" 2>&1) || {
+                echo "[deploy] docker inspect failed for cid=[$cid]: $state"
+                exit 1
+              }
+              health=$(sudo docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$cid" 2>&1) || {
+                echo "[deploy] docker inspect (health) failed for cid=[$cid]: $health"
+                exit 1
+              }
               if [ "$state" != "running" ]; then
                 echo "[deploy] container is $state, not running:"
                 sudo docker logs --tail 50 "$cid" || true
@@ -201,6 +213,7 @@ jobs:
               fi
               sleep 10
             done
+            set +x
             if [ "$ok" -ne 1 ]; then
               echo "[deploy] did not become healthy in time (last state=$state health=$health):"
               sudo docker logs --tail 50 "$cid" || true
