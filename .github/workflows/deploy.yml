@@ -125,7 +125,22 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           envs: AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_REGION,ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,DEPLOY_PATH
-          script_stop: true
+          # script_stop is OFF, and must stay off. It makes drone-ssh inject
+          #     DRONE_SSH_PREV_COMMAND_EXIT_CODE=$?
+          #     [ $DRONE_SSH_PREV_COMMAND_EXIT_CODE -ne 0 ] && exit ...
+          # after EVERY command — including the test of an `if`. A conditional that evaluates
+          # false exits 1, which is indistinguishable from a command that failed, so the step
+          # died on the plain `elif [ "$health" = "unhealthy" ]` the moment health was anything
+          # but healthy. Caught under `set -x` on 2026-10-31:
+          #     + '[' none = healthy ']'
+          #     + '[' none = unhealthy ']'
+          #     + DRONE_SSH_PREV_COMMAND_EXIT_CODE=1
+          #     + exit 1
+          # That is also what mangled the earlier `case` form into a `;;;` syntax error, and why
+          # the one green run was the one where the container was ALREADY healthy — the first
+          # `if` returned 0 and never tripped the guard. Red for four days over working deploys.
+          # `set -e` on line 1 is the correct mechanism: bash deliberately does not trip it on a
+          # test used as a condition.
           script: |
             set -e
             IMAGE="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
