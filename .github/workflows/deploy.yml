@@ -139,7 +139,14 @@ jobs:
             # `up -d` returns when the container STARTS, not when it works. Without this a
             # deploy reports success over a container that died seconds later — a bad build or missing runtime config, and
             # Fail the deploy instead of leaving a green tick on a dead service.
-            cid=$(sudo docker compose ps -q controlcenter-web)
+            # `|| true` matters: under `set -e` a failing command substitution aborts the whole
+            # script BEFORE the message below can print. `ps -q` matches only RUNNING containers
+            # and returns non-zero when there are none, so a service that starts and dies gives a
+            # silent "exited with status 1". Fall back to `-aq` so the state check can show logs.
+            cid=$(sudo docker compose ps -q controlcenter-web || true)
+            if [ -z "$cid" ]; then
+              cid=$(sudo docker compose ps -aq controlcenter-web || true)
+            fi
             if [ -z "$cid" ]; then
               echo "[deploy] no container for controlcenter-web after up -d"
               exit 1
@@ -154,21 +161,29 @@ jobs:
                 sudo docker logs --tail 50 "$cid" || true
                 exit 1
               fi
-              case "$health" in
-                healthy) echo "[deploy] healthy"; ok=1; break ;;
-                unhealthy)
-                  echo "[deploy] container reports unhealthy:"
-                  sudo docker logs --tail 50 "$cid" || true
-                  exit 1 ;;
-                none)
-                  # No healthcheck on this image, so "running" alone proves nothing: require it to
-                  # STAY up, which is how a boot-time failure shows itself.
-                  settled=$((settled + 1))
-                  if [ "$settled" -ge 6 ]; then
-                    echo "[deploy] no healthcheck on this image; running steadily for 60s"
-                    ok=1; break
-                  fi ;;
-              esac
+              # if/elif, not case: this step runs with script_stop: true, and appleboy/ssh-action
+              # rewrites the script so a line ending in a case-arm terminator becomes "fi ;;;".
+              # bash then dies with "syntax error near unexpected token ';'" AFTER the container has
+              # already started, so the deploy reports failure over a roll that succeeded. Red here
+              # since 2026-10-27. Keep this block free of line-ending ";;".
+              if [ "$health" = "healthy" ]; then
+                echo "[deploy] healthy"
+                ok=1
+                break
+              elif [ "$health" = "unhealthy" ]; then
+                echo "[deploy] container reports unhealthy:"
+                sudo docker logs --tail 50 "$cid" || true
+                exit 1
+              else
+                # No healthcheck on this image, so "running" alone proves nothing: require it to
+                # STAY up, which is how a boot-time failure shows itself.
+                settled=$((settled + 1))
+                if [ "$settled" -ge 6 ]; then
+                  echo "[deploy] no healthcheck on this image; running steadily for 60s"
+                  ok=1
+                  break
+                fi
+              fi
               sleep 10
             done
             if [ "$ok" -ne 1 ]; then
