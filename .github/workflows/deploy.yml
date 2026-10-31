@@ -134,7 +134,22 @@ jobs:
               | sudo docker login --username AWS --password-stdin "$ECR_REGISTRY"
             sudo docker pull "$IMAGE"
             cd "$DEPLOY_PATH"
+            # `up -d` exits non-zero even when the roll worked. On 2026-10-31 at 04:19:04 it
+            # recreated and started the backend, the container went healthy and is still serving —
+            # and this step died half a second later under `set -e`, printing not one word, because
+            # compose returned 1. A silent exit over a working deploy is worse than no gate at all:
+            # it hid a disk at 100% for four days. So compose's exit code is now ADVISORY and logged,
+            # and the health gate below is the sole authority on whether the roll worked — that is
+            # the question we actually care about, and it answers it directly.
+            set +e
             sudo docker compose up -d controlcenter-web
+            up_rc=$?
+            set -e
+            echo "[deploy] compose up exit=$up_rc"
+            if [ "$up_rc" -ne 0 ]; then
+              echo "[deploy] compose up reported failure; the health gate below decides."
+              sudo docker compose logs --tail 30 controlcenter-web || true
+            fi
 
             # `up -d` returns when the container STARTS, not when it works. Without this a
             # deploy reports success over a container that died seconds later — a bad build or missing runtime config, and
