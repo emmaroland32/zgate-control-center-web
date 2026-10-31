@@ -425,7 +425,10 @@ export const authService = {
    * so the sign-in page still reads MFA_REQUIRED and ACCOUNT_LOCKED off them.
    */
   login: (email: string, password: string, mfaCode?: string): Promise<{ email: string; role: string }> =>
-    api.post(`${SESSION}/login`, { email, password, ...(mfaCode ? { mfaCode } : {}) }).then((r) => r.data),
+    // baseURL "" : the session route is same-origin but NOT under the /api/cc proxy. Through `api`
+    // without it, axios prepended the base URL and posted to /api/cc/api/cc-session/login — the
+    // proxy forwarded that to the backend, which has no such route, and every sign-in got a 401.
+    api.post(`${SESSION}/login`, { email, password, ...(mfaCode ? { mfaCode } : {}) }, { baseURL: "" }).then((r) => r.data),
 };
 
 /**
@@ -444,7 +447,8 @@ export const ssoService = {
 
   /** Completes the sign-in through the session route, so the token it yields stays on the server. */
   callback: (code: string, state: string): Promise<{ email: string; role: string }> =>
-    api.post(`${SESSION}/sso`, { code, state }).then((r) => r.data),
+    // baseURL "": see `login` — the session route is not under the /api/cc proxy.
+    api.post(`${SESSION}/sso`, { code, state }, { baseURL: "" }).then((r) => r.data),
 };
 
 export type SecurityPolicy = {
