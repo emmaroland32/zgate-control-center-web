@@ -92,7 +92,9 @@ const MODULES: {
   { id: "CRM",              name: "CRM",               description: "Client relationship and contact management",    icon: <Users size={18} />,         color: "bg-blue-500",    core: true },
   { id: "COMPLIANCE",       name: "Compliance",         description: "Regulatory and compliance workflows",           icon: <Scale size={18} />,         color: "bg-purple-500",  core: true },
   { id: "TREASURY",         name: "Treasury",           description: "Cash management and treasury operations",       icon: <Wallet size={18} />,        color: "bg-emerald-500", core: false, requires: ["CRM"] },
-  { id: "FINANCIAL_CONTROL",name: "Financial Control",  description: "GL, chart of accounts and reporting",           icon: <BarChart3 size={18} />,     color: "bg-indigo-500",  core: false, requires: ["CRM"] },
+  // The id is the one ZGATE licenses the ledger under. It was FINANCIAL_CONTROL here, which a
+  // deployment matches to nothing: a licence cut from this wizard left the ledger unlicensed.
+  { id: "FINCON",           name: "Financial Control",  description: "GL, chart of accounts and reporting",           icon: <BarChart3 size={18} />,     color: "bg-indigo-500",  core: false, requires: ["CRM"] },
   { id: "PORTFOLIO",        name: "Portfolio",          description: "Portfolio management and analytics",            icon: <TrendingUp size={18} />,    color: "bg-cyan-500",    core: false, requires: ["CRM"] },
   { id: "TRADE",            name: "Trade",              description: "Trade order management and execution",          icon: <ArrowLeftRight size={18} />,color: "bg-orange-500",  core: false, requires: ["PORTFOLIO"] },
   { id: "RISK",             name: "Risk",               description: "Risk analytics, limits and monitoring",         icon: <AlertTriangle size={18} />, color: "bg-red-500",     core: false, requires: ["PORTFOLIO"] },
@@ -102,16 +104,29 @@ const MODULES: {
   { id: "DISTRIBUTION",     name: "Distribution",       description: "Distribution network and channel management",  icon: <Globe size={18} />,         color: "bg-pink-500",    core: false, requires: ["CRM"] },
   { id: "FIXED_DEPOSIT",    name: "Fixed Deposits",     description: "Customer term deposits and the funding they provide", icon: <PiggyBank size={18} />, color: "bg-green-600", core: false, requires: ["CRM", "PORTFOLIO"] },
   // Statements are built from the general ledger, so the ledger has to be there.
-  { id: "FINANCIAL_REPORTING", name: "Financial Reporting", description: "Statutory financial statements built from the ledger", icon: <FileSpreadsheet size={18} />, color: "bg-violet-600", core: false, requires: ["CRM", "FINANCIAL_CONTROL"] },
+  { id: "FINANCIAL_REPORTING", name: "Financial Reporting", description: "Statutory financial statements built from the ledger", icon: <FileSpreadsheet size={18} />, color: "bg-violet-600", core: false, requires: ["CRM", "FINCON"] },
 ];
 
 const MODULE_BUNDLES = [
   { label: "Starter",        modules: ["CRM", "COMPLIANCE"] },
-  { label: "Banking Suite",  modules: ["CRM", "COMPLIANCE", "TREASURY", "FINANCIAL_CONTROL", "BANKING"] },
+  { label: "Banking Suite",  modules: ["CRM", "COMPLIANCE", "TREASURY", "FINCON", "BANKING"] },
   { label: "Full Platform",  modules: MODULES.map((m) => m.id) },
 ];
 
 const LOCAL_STORAGE_KEY = "zgate_wizard_state";
+
+/** Module ids this wizard used to emit, and what ZGATE actually calls the module. */
+const RENAMED_MODULE_IDS: Record<string, string> = { FINANCIAL_CONTROL: "FINCON" };
+
+/**
+ * A draft saved before an id was corrected still holds the old one. Left as it is, the module
+ * would show as an unknown selection and go into the licence under a name no deployment matches.
+ */
+function withCurrentModuleIds(draft: WizardState): WizardState {
+  if (!Array.isArray(draft.selectedModules)) return draft;
+  const selectedModules = [...new Set(draft.selectedModules.map((id) => RENAMED_MODULE_IDS[id] ?? id))];
+  return { ...draft, selectedModules };
+}
 
 // ─── Default state ─────────────────────────────────────────────────────────────
 
@@ -1854,7 +1869,7 @@ export default function SetupWizardPage() {
     if (typeof window !== "undefined") {
       try {
         const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-        if (saved) return JSON.parse(saved) as WizardState;
+        if (saved) return withCurrentModuleIds(JSON.parse(saved) as WizardState);
       } catch { /* corrupt draft in localStorage — fall through to a fresh wizard */ }
     }
     return buildDefaultState();
