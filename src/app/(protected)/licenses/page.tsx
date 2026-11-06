@@ -21,6 +21,7 @@ import {
   Repeat,
   AlertTriangle,
   FileCheck,
+  FileSpreadsheet,
   DollarSign,
   Landmark,
   Users,
@@ -46,6 +47,7 @@ const ALL_MODULES = [
   { id: "BANKING",       name: "Banking",        icon: Building2,     description: "Core banking and account management" },
   { id: "DISTRIBUTION",  name: "Distribution",   icon: Package,       description: "Distribution channels and advisor management" },
   { id: "FIXED_DEPOSIT", name: "Fixed Deposits", icon: Wallet,        description: "Customer term deposits: products, placements and the funding they provide" },
+  { id: "FINANCIAL_REPORTING", name: "Financial Reporting", icon: FileSpreadsheet, description: "Statutory financial statements from the ledger: reporting packs, review and sign-off, XBRL" },
 ] as const;
 
 type ModuleId = typeof ALL_MODULES[number]["id"];

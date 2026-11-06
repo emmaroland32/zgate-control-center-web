@@ -39,6 +39,7 @@ import {
   Fingerprint,
   PartyPopper,
   PiggyBank,
+  FileSpreadsheet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { releaseService, licenseService, databaseService, apiError } from "@/services/controlcenter.service";
@@ -100,6 +101,8 @@ const MODULES: {
   { id: "BANKING",          name: "Banking",            description: "Banking accounts and transaction processing",   icon: <Building2 size={18} />,     color: "bg-slate-600",   core: false, requires: ["CRM"] },
   { id: "DISTRIBUTION",     name: "Distribution",       description: "Distribution network and channel management",  icon: <Globe size={18} />,         color: "bg-pink-500",    core: false, requires: ["CRM"] },
   { id: "FIXED_DEPOSIT",    name: "Fixed Deposits",     description: "Customer term deposits and the funding they provide", icon: <PiggyBank size={18} />, color: "bg-green-600", core: false, requires: ["CRM", "PORTFOLIO"] },
+  // Statements are built from the general ledger, so the ledger has to be there.
+  { id: "FINANCIAL_REPORTING", name: "Financial Reporting", description: "Statutory financial statements built from the ledger", icon: <FileSpreadsheet size={18} />, color: "bg-violet-600", core: false, requires: ["CRM", "FINANCIAL_CONTROL"] },
 ];
 
 const MODULE_BUNDLES = [
